@@ -3,410 +3,118 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NeuroTwin — Caregiver Console</title>
+  <title>NeuroTwin — Cognitive Memory Companion</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Vercel Geist Header -->
-  <header class="geist-header">
-    <div class="geist-brand">
-      <span class="brand-icon">NT</span>
-      <span class="brand-text">NeuroTwin</span>
-      <span class="brand-divider">/</span>
-      <span class="brand-sub">Caregiver Console</span>
+  <!-- App Header -->
+  <header class="senior-header">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span class="brand-title">NeuroTwin Memory Companion</span>
     </div>
-
-    <!-- Navigation Tabs -->
-    <nav class="geist-nav">
-      <button class="geist-tab active" onclick="switchTab('tab-monitor', this)">
-        <span class="tab-index">01</span> Ambient Monitor
-      </button>
-      <button class="geist-tab" onclick="switchTab('tab-people', this)">
-        <span class="tab-index">02</span> People & Biometrics
-      </button>
-      <button class="geist-tab" onclick="switchTab('tab-memories', this)">
-        <span class="tab-index">03</span> Memory Repository
-      </button>
-      <button class="geist-tab" onclick="switchTab('tab-medical', this)">
-        <span class="tab-index">04</span> Medical & Emergency
-      </button>
-      <button class="geist-tab" onclick="switchTab('tab-telemetry', this)">
-        <span class="tab-index">05</span> System Telemetry
-      </button>
-    </nav>
-
-    <div class="geist-status">
-      <div class="status-tag">
-        <span class="status-dot"></span>
-        <span>CLIENT ONLINE • 1.5 FPS</span>
-      </div>
-      <span id="clock-display">18:07:30 UTC</span>
-    </div>
+    <button class="mode-toggle-btn" id="toggle-mode-btn" onclick="toggleCaregiverMode()">
+      <span>⚙️ Caregiver Mode</span>
+    </button>
   </header>
 
-  <div class="geist-main">
+  <!-- Main Patient Companion Container (Default Senior View) -->
+  <main class="senior-container" id="patient-view">
 
-    <!-- ================= TAB 1: AMBIENT MONITOR ================= -->
-    <main class="tab-pane" id="tab-monitor">
-      <div class="title-bar">
-        <div>
-          <h1 class="title-heading">Live Ambient Vision & Speech Stream</h1>
-          <p class="title-description">Passive CameraX frame evaluation, ML Kit gate status, and Qdrant vector retrieval.</p>
-        </div>
-        <button class="geist-btn geist-btn-primary" onclick="simulateVoiceQuery()">Simulate Voice Query: "Who is she?"</button>
-      </div>
-
-      <div class="layout-grid">
-        <!-- Camera Stream Frame -->
-        <div class="geist-card">
-          <div class="card-header">
-            <span class="card-title-text">CameraX Frame Stream (#CAM-0821)</span>
-            <span style="font-family: var(--font-mono); font-size: 11px; color: var(--ds-text-secondary);">GATED: ML_KIT_PASS</span>
-          </div>
-          <div class="card-content">
-            <div class="frame-preview">
-              <div class="frame-box">
-                <div class="frame-label">Sarah Varma • 0.9421</div>
-              </div>
-              <div style="position: absolute; bottom: 8px; left: 10px; font-family: var(--font-mono); font-size: 10px; color: var(--ds-text-muted);">
-                FRAME EVALUATION ──> FASTAPI POST /FRAME
-              </div>
-            </div>
-
-            <table class="geist-kv">
-              <tr>
-                <td class="kv-label">FACIAL VECTOR</td>
-                <td class="kv-value" style="font-family: var(--font-mono); font-size: 11px;">InsightFace 512-d [0.024, -0.118, 0.452...]</td>
-              </tr>
-              <tr>
-                <td class="kv-label">COSINE DISTANCE</td>
-                <td class="kv-value" style="font-family: var(--font-mono); font-size: 11px;">0.9421 (Threshold >= 0.90)</td>
-              </tr>
-              <tr>
-                <td class="kv-label">OBJECT DETECTED</td>
-                <td class="kv-value" style="font-family: var(--font-mono); font-size: 11px;">reading_glasses (Living Room Coffee Table)</td>
-              </tr>
-            </table>
-          </div>
-        </div>
-
-        <!-- Active Context Payload -->
-        <div class="geist-card">
-          <div class="card-header">
-            <span class="card-title-text">Retrieved Person Context Payload</span>
-            <span style="font-family: var(--font-mono); font-size: 11px; color: var(--ds-text-muted);">POINT_ID: p_sarah_01</span>
-          </div>
-          <div class="card-content">
-            <table class="geist-kv">
-              <tr>
-                <td class="kv-label">NAME / RELATION</td>
-                <td class="kv-value" style="font-weight: 500;">Sarah Varma (Daughter)</td>
-              </tr>
-              <tr>
-                <td class="kv-label">LAST VISIT</td>
-                <td class="kv-value">Yesterday at 3:30 PM</td>
-              </tr>
-              <tr>
-                <td class="kv-label">BIRTHDAY</td>
-                <td class="kv-value">April 14, 1992</td>
-              </tr>
-            </table>
-
-            <div>
-              <div class="field-label" style="margin-bottom: 6px;">RETRIEVED ANECDOTES & STORIES</div>
-              <div style="display: flex; flex-direction: column; gap: 6px;">
-                <div style="padding: 8px 10px; background: var(--ds-background); border: 1px solid var(--ds-border-subtle); border-radius: 4px;">
-                  "Brought blueberry muffins during her visit yesterday."
-                </div>
-                <div style="padding: 8px 10px; background: var(--ds-background); border: 1px solid var(--ds-border-subtle); border-radius: 4px;">
-                  "Loves taking walks in the botanical garden with you."
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div class="field-label" style="margin-bottom: 6px;">FAVORITE SONGS & HOBBIES</div>
-              <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                <span class="geist-badge">You Are My Sunshine</span>
-                <span class="geist-badge">Here Comes the Sun</span>
-                <span class="geist-badge">Gardening</span>
-                <span class="geist-badge">Baking Pastries</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Patient Voice Interaction Log -->
-      <div class="table-frame">
-        <div class="card-header">
-          <span class="card-title-text">Patient Voice Interaction Log</span>
-          <span style="font-family: var(--font-mono); font-size: 11px; color: var(--ds-text-muted);">WHISPER STT ──> PIPER TTS</span>
-        </div>
-        <table class="geist-table">
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Spoken Query</th>
-              <th>Context Match</th>
-              <th>Generated Companion Response</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="voice-log-rows">
-            <tr>
-              <td style="font-family: var(--font-mono); font-size: 11px;">17:48:12</td>
-              <td style="font-weight: 500; color: var(--ds-text-primary);">"Who is she?"</td>
-              <td>Sarah Varma (Daughter)</td>
-              <td>"This is your daughter Sarah. She visited you yesterday afternoon and brought your favorite blueberry muffins."</td>
-              <td><button class="geist-btn" onclick="playAudioDemo()">Play Earpiece Audio</button></td>
-            </tr>
-            <tr>
-              <td style="font-family: var(--font-mono); font-size: 11px;">16:30:05</td>
-              <td style="font-weight: 500; color: var(--ds-text-primary);">"Where are my reading glasses?"</td>
-              <td>reading_glasses</td>
-              <td>"Your blue reading glasses were last seen on the living room coffee table next to your book."</td>
-              <td><button class="geist-btn" onclick="playAudioDemo()">Play Earpiece Audio</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </main>
-
-    <!-- ================= TAB 2: PEOPLE & BIOMETRICS ================= -->
-    <main class="tab-pane" id="tab-people" style="display: none;">
-      <div class="title-bar">
-        <div>
-          <h1 class="title-heading">Registered People & Facial Biometrics</h1>
-          <p class="title-description">Manage family profiles, facial embedding vectors in Qdrant, and relational metadata.</p>
-        </div>
-        <button class="geist-btn geist-btn-primary" onclick="openModal('modal-add-person')">+ Register New Person</button>
-      </div>
-
-      <div class="table-frame">
-        <table class="geist-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Relationship</th>
-              <th>Birthday</th>
-              <th>Vector Index Status</th>
-              <th>Primary Memory Anchor</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="people-table-rows">
-            <!-- Rendered dynamically by app.js -->
-          </tbody>
-        </table>
-      </div>
-    </main>
-
-    <!-- ================= TAB 3: MEMORY REPOSITORY ================= -->
-    <main class="tab-pane" id="tab-memories" style="display: none;">
-      <div class="title-bar">
-        <div>
-          <h1 class="title-heading">Memory Anchors & Story Repository</h1>
-          <p class="title-description">Life events, family anecdotes, voice notes, favorite places, and auditory anchors.</p>
-        </div>
-        <button class="geist-btn geist-btn-primary" onclick="openModal('modal-add-memory')">+ Log New Memory Anchor</button>
-      </div>
-
-      <div class="table-frame">
-        <table class="geist-table">
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Person Binding</th>
-              <th>Title / Story Summary</th>
-              <th>Details & Voice Notes</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="memory-table-rows">
-            <tr>
-              <td><span class="geist-badge">Life Event</span></td>
-              <td style="font-weight: 500; color: var(--ds-text-primary);">Sarah Varma</td>
-              <td>Graduated law school in 2016</td>
-              <td>"Attended commencement ceremony in San Francisco."</td>
-              <td><button class="geist-btn">Edit</button></td>
-            </tr>
-            <tr>
-              <td><span class="geist-badge">Anecdote</span></td>
-              <td style="font-weight: 500; color: var(--ds-text-primary);">Sarah Varma</td>
-              <td>Caught first fish at Lake Tahoe</td>
-              <td>"Summer vacation when she was 8 years old."</td>
-              <td><button class="geist-btn">Edit</button></td>
-            </tr>
-            <tr>
-              <td><span class="geist-badge">Favorite Song</span></td>
-              <td style="font-weight: 500; color: var(--ds-text-primary);">Sarah Varma</td>
-              <td>"You Are My Sunshine"</td>
-              <td>Used as soothing audio anchor during moments of hesitation.</td>
-              <td><button class="geist-btn">Edit</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </main>
-
-    <!-- ================= TAB 4: MEDICAL & EMERGENCY ================= -->
-    <main class="tab-pane" id="tab-medical" style="display: none;">
-      <div class="title-bar">
-        <div>
-          <h1 class="title-heading">Medications & Emergency Care Directory</h1>
-          <p class="title-description">Active dosage schedules, prescribing physician context, and primary emergency contacts.</p>
-        </div>
-        <div style="display: flex; gap: 8px;">
-          <button class="geist-btn" onclick="openModal('modal-add-med')">+ Add Medication</button>
-          <button class="geist-btn geist-btn-primary" onclick="openModal('modal-add-contact')">+ Add Emergency Contact</button>
-        </div>
-      </div>
-
-      <div class="layout-grid">
-        <!-- Medication Schedule -->
-        <div class="geist-card">
-          <div class="card-header">
-            <span class="card-title-text">Active Medication Schedule</span>
-          </div>
-          <div class="card-content" style="padding: 0;">
-            <table class="geist-table">
-              <thead>
-                <tr>
-                  <th>Medication</th>
-                  <th>Dosage</th>
-                  <th>Schedule</th>
-                  <th>Instructions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style="font-weight: 500; color: var(--ds-text-primary);">Donepezil</td>
-                  <td>10 mg</td>
-                  <td style="font-family: var(--font-mono); font-size: 11px;">08:00 AM Daily</td>
-                  <td>Take with breakfast water</td>
-                </tr>
-                <tr>
-                  <td style="font-weight: 500; color: var(--ds-text-primary);">Memantine</td>
-                  <td>10 mg</td>
-                  <td style="font-family: var(--font-mono); font-size: 11px;">08:00 PM Daily</td>
-                  <td>Take after evening meal</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Emergency Contacts -->
-        <div class="geist-card">
-          <div class="card-header">
-            <span class="card-title-text">Emergency Contact Directory</span>
-          </div>
-          <div class="card-content" style="padding: 0;">
-            <table class="geist-table">
-              <thead>
-                <tr>
-                  <th>Contact Name</th>
-                  <th>Relationship</th>
-                  <th>Phone Number</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style="font-weight: 500; color: var(--ds-text-primary);">Sarah Varma</td>
-                  <td>Daughter</td>
-                  <td style="font-family: var(--font-mono); font-size: 11px;">+1 (555) 234-5678</td>
-                  <td><span class="geist-badge">PRIMARY</span></td>
-                </tr>
-                <tr>
-                  <td style="font-weight: 500; color: var(--ds-text-primary);">Dr. Aris Thorne</td>
-                  <td>Neurologist</td>
-                  <td style="font-family: var(--font-mono); font-size: 11px;">+1 (555) 987-6543</td>
-                  <td><span class="geist-badge">CLINIC</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- ================= TAB 5: SYSTEM TELEMETRY ================= -->
-    <main class="tab-pane" id="tab-telemetry" style="display: none;">
-      <div class="title-bar">
-        <div>
-          <h1 class="title-heading">System Telemetry & Hardware Infrastructure</h1>
-          <p class="title-description">M4 MacBook Air host resource usage, Qdrant vector count, and model latency telemetry.</p>
-        </div>
-        <button class="geist-btn" onclick="fetchTelemetry()">Refresh Telemetry</button>
-      </div>
-
-      <div class="geist-card">
-        <div class="card-header">
-          <span class="card-title-text">M4 Backend Service Metrics</span>
-          <span style="font-family: var(--font-mono); font-size: 11px; color: var(--ds-text-secondary);">STATUS: NOMINAL</span>
-        </div>
-        <div class="card-content">
-          <table class="geist-kv">
-            <tr>
-              <td class="kv-label">HOST SERVER</td>
-              <td class="kv-value" style="font-family: var(--font-mono);">Apple M4 MacBook Air (macOS Sonoma)</td>
-            </tr>
-            <tr>
-              <td class="kv-label">FASTAPI WORKER</td>
-              <td class="kv-value" style="font-family: var(--font-mono);">Uvicorn asyncio loop (port 8000)</td>
-            </tr>
-            <tr>
-              <td class="kv-label">QDRANT VECTOR DB</td>
-              <td class="kv-value" style="font-family: var(--font-mono);">Connected (2 Collections: people [2 vectors], objects [5 vectors])</td>
-            </tr>
-            <tr>
-              <td class="kv-label">OLLAMA ENGINE</td>
-              <td class="kv-value" style="font-family: var(--font-mono);">Qwen3-8B active (RAM usage: 5.2 GB)</td>
-            </tr>
-            <tr>
-              <td class="kv-label">AVG INFERENCE LATENCY</td>
-              <td class="kv-value" style="font-family: var(--font-mono);">Vision: 42ms | Whisper STT: 110ms | LLM: 180ms | TTS: 65ms</td>
-            </tr>
-          </table>
-        </div>
-      </div>
-    </main>
-
-  </div>
-
-  <!-- Modal Component: Add Person -->
-  <div class="geist-modal-overlay" id="modal-add-person" style="display: none;">
-    <div class="geist-modal">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: 600;">Register New Person</span>
-        <button class="geist-btn" onclick="closeModal('modal-add-person')">✕</button>
-      </div>
-      <div class="form-field">
-        <label class="field-label">Full Name</label>
-        <input type="text" id="input-person-name" class="field-input" placeholder="e.g. Sarah Varma">
-      </div>
-      <div class="form-field">
-        <label class="field-label">Relationship to Patient</label>
-        <input type="text" id="input-person-relation" class="field-input" placeholder="e.g. Daughter, Neighbor">
-      </div>
-      <div class="form-field">
-        <label class="field-label">Birthday</label>
-        <input type="text" id="input-person-bday" class="field-input" placeholder="e.g. April 14, 1992">
-      </div>
-      <div class="form-field">
-        <label class="field-label">Initial Memory Anecdote</label>
-        <input type="text" id="input-person-memory" class="field-input" placeholder="e.g. Brought blueberry muffins during her visit yesterday">
-      </div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-        <button class="geist-btn" onclick="closeModal('modal-add-person')">Cancel</button>
-        <button class="geist-btn geist-btn-primary" onclick="submitAddPerson()">Save & Index Vector</button>
+    <!-- Active Recognized Person Card -->
+    <div class="hero-card">
+      <div class="avatar-large">👩‍👧</div>
+      <div class="hero-info">
+        <span class="hero-relation-badge">Your Daughter</span>
+        <h1 class="hero-name">Sarah Varma</h1>
+        <p class="hero-summary">
+          Sarah is standing near you. She visited you yesterday afternoon at 3:30 PM and brought your favorite blueberry muffins.
+        </p>
       </div>
     </div>
-  </div>
+
+    <!-- Massive Senior Action Buttons (76px Height) -->
+    <div class="action-grid">
+      <button class="btn-senior btn-senior-primary" onclick="askQuestion()">
+        <span class="btn-icon">🎙️</span>
+        <span>Tap to Ask a Question ("Who is she?" or "Where are my glasses?")</span>
+      </button>
+
+      <button class="btn-senior" onclick="playMusic()">
+        <span class="btn-icon">🎵</span>
+        <span>Play Sarah's Song: "You Are My Sunshine"</span>
+      </button>
+
+      <button class="btn-senior" onclick="callSarah()">
+        <span class="btn-icon">📞</span>
+        <span>Call Daughter Sarah</span>
+      </button>
+    </div>
+
+    <!-- Reassuring Memory Reminders -->
+    <div>
+      <h2 class="memory-section-title">Special Memories with Sarah</h2>
+      <div class="story-list">
+        <div class="story-card">
+          <span class="story-icon">🧁</span>
+          <div>
+            <strong>Recent Visit:</strong> Sarah visited you yesterday and brought fresh blueberry muffins.
+          </div>
+        </div>
+        <div class="story-card">
+          <span class="story-icon">🌱</span>
+          <div>
+            <strong>Favorite Hobby:</strong> Sarah loves taking long walks in the botanical garden with you.
+          </div>
+        </div>
+        <div class="story-card">
+          <span class="story-icon">🎓</span>
+          <div>
+            <strong>Life Event:</strong> Sarah graduated from law school in 2016.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Caregiver Management Mode (Hidden by default) -->
+  <main class="senior-container" id="caregiver-view" style="display: none;">
+    <div class="caregiver-panel">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="font-size: 22px;">Caregiver Profile & Memory Management</h2>
+        <button class="btn-senior" style="height: 48px; font-size: 15px;" onclick="addPersonPrompt()">+ Add New Person</button>
+      </div>
+
+      <table class="senior-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Relationship</th>
+            <th>Birthday</th>
+            <th>Key Memory Anchor</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="caregiver-table-body">
+          <tr>
+            <td style="font-weight: 700; color: var(--text-primary);">Sarah Varma</td>
+            <td>Daughter</td>
+            <td>April 14, 1992</td>
+            <td>Brought blueberry muffins yesterday</td>
+            <td><button class="mode-toggle-btn">Edit</button></td>
+          </tr>
+          <tr>
+            <td style="font-weight: 700; color: var(--text-primary);">Dr. Aris Thorne</td>
+            <td>Primary Doctor</td>
+            <td>September 22, 1980</td>
+            <td>Weekly checkup every Tuesday morning</td>
+            <td><button class="mode-toggle-btn">Edit</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
 
   <script src="app.js"></script>
 </body>

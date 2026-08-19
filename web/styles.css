@@ -1,20 +1,22 @@
-/* Vercel Geist Design System — Pure Monochromatic Neutral Slate (Zero Slop) */
-@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600&display=swap');
+/* NeuroTwin — Accessible Senior Patient & Caregiver Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --ds-background: #0a0a0a;
-  --ds-surface: #121212;
-  --ds-surface-hover: #1a1a1a;
-  --ds-border: #262626;
-  --ds-border-subtle: #1f1f1f;
+  --bg: #090a0f;
+  --surface: #131622;
+  --surface-card: #1c2030;
+  --surface-hover: #262c42;
+  --border: #2c334a;
   
-  --ds-text-primary: #fafafa;
-  --ds-text-secondary: #a1a1aa;
-  --ds-text-muted: #737373;
-  --ds-text-disabled: #525252;
+  --text-primary: #ffffff;
+  --text-secondary: #c5cbd8;
+  --text-muted: #8e97ab;
   
-  --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --accent-gold: #fbbf24;
+  --accent-blue: #3b82f6;
+  --accent-green: #22c55e;
+  
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 * {
@@ -24,10 +26,10 @@
 }
 
 body {
-  background-color: var(--ds-background);
-  color: var(--ds-text-primary);
-  font-family: var(--font-sans);
-  font-size: 13px;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: 18px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   display: flex;
@@ -36,388 +38,219 @@ body {
   overflow: hidden;
 }
 
-/* Header & Top Navigation Bar */
-.geist-header {
-  height: 48px;
-  border-bottom: 1px solid var(--ds-border);
-  background-color: var(--ds-background);
+/* Header Bar */
+.senior-header {
+  height: 64px;
+  border-bottom: 2px solid var(--border);
+  background-color: var(--surface);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 24px;
   flex-shrink: 0;
 }
 
-.geist-brand {
+.brand-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.mode-toggle-btn {
+  padding: 10px 18px;
+  background-color: var(--surface-card);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.brand-icon {
-  width: 20px;
-  height: 20px;
-  background: var(--ds-text-primary);
-  color: var(--ds-background);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 11px;
+.mode-toggle-btn:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--text-secondary);
 }
 
-.brand-text {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.brand-divider {
-  color: var(--ds-text-disabled);
-  font-family: var(--font-mono);
-}
-
-.brand-sub {
-  font-size: 12px;
-  color: var(--ds-text-secondary);
-}
-
-/* Navigation Tabs */
-.geist-nav {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 100%;
-}
-
-.geist-tab {
-  height: 100%;
-  padding: 0 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--ds-text-secondary);
-  font-size: 13px;
-  font-weight: 400;
-  cursor: pointer;
-  transition: all 0.1s ease;
-}
-
-.geist-tab:hover {
-  color: var(--ds-text-primary);
-}
-
-.geist-tab.active {
-  color: var(--ds-text-primary);
-  font-weight: 500;
-  border-bottom-color: var(--ds-text-primary);
-}
-
-.tab-index {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--ds-text-muted);
-}
-
-.geist-status {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--ds-text-muted);
-}
-
-.status-tag {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border: 1px solid var(--ds-border);
-  border-radius: 4px;
-  color: var(--ds-text-secondary);
-}
-
-.status-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background-color: var(--ds-text-primary);
-}
-
-/* App Main Container */
-.geist-main {
+/* Main Container */
+.senior-container {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.tab-pane {
-  flex: 1;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-.title-bar {
+/* Patient Hero Recognition Card */
+.hero-card {
+  background-color: var(--surface-card);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--ds-border-subtle);
+  gap: 28px;
+  align-items: center;
 }
 
-.title-heading {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+.avatar-large {
+  width: 140px;
+  height: 140px;
+  border-radius: 12px;
+  background-color: #2c334a;
+  border: 3px solid var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  flex-shrink: 0;
 }
 
-.title-description {
-  font-size: 12px;
-  color: var(--ds-text-secondary);
-  margin-top: 2px;
+.hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* Two Column Layout */
-.layout-grid {
+.hero-relation-badge {
+  display: inline-block;
+  background-color: rgba(251, 191, 36, 0.15);
+  color: var(--accent-gold);
+  border: 1px solid var(--accent-gold);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  width: fit-content;
+}
+
+.hero-name {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.hero-summary {
+  font-size: 20px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* Massive Senior Action Buttons */
+.action-grid {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-/* Geist Card / Panel */
-.geist-card {
-  background-color: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.card-header {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--ds-border);
+.btn-senior {
+  height: 76px;
+  padding: 0 24px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 14px;
+  transition: all 0.15s ease;
 }
 
-.card-title-text {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ds-text-secondary);
-  font-family: var(--font-mono);
+.btn-senior:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--text-primary);
+  transform: translateY(-1px);
 }
 
-.card-content {
-  padding: 14px;
+.btn-senior-primary {
+  background-color: var(--text-primary);
+  color: var(--bg);
+  border: none;
+  grid-column: span 2;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.btn-senior-primary:hover {
+  background-color: #e2e8f0;
+}
+
+.btn-icon {
+  font-size: 26px;
+}
+
+/* Memory Story Cards */
+.memory-section-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.story-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* Video Frame Neutral Preview */
-.frame-preview {
-  width: 100%;
-  height: 200px;
-  background-color: #050505;
-  border: 1px solid var(--ds-border-subtle);
-  border-radius: 4px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.frame-box {
-  position: absolute;
-  top: 30px;
-  left: 36%;
-  width: 110px;
-  height: 120px;
-  border: 1px solid var(--ds-text-primary);
-}
-
-.frame-label {
-  position: absolute;
-  top: -18px;
-  left: -1px;
-  background: var(--ds-text-primary);
-  color: var(--ds-background);
-  font-size: 10px;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  padding: 1px 4px;
-}
-
-/* Geist Key-Value Table */
-.geist-kv {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.geist-kv tr {
-  border-bottom: 1px solid var(--ds-border-subtle);
-}
-
-.geist-kv tr:last-child {
-  border-bottom: none;
-}
-
-.geist-kv td {
-  padding: 8px 0;
-  font-size: 12px;
-}
-
-.kv-label {
-  color: var(--ds-text-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  width: 140px;
-}
-
-.kv-value {
-  color: var(--ds-text-primary);
-}
-
-/* Data Table */
-.table-frame {
-  width: 100%;
-  border: 1px solid var(--ds-border);
-  border-radius: 6px;
-  overflow: hidden;
-  background-color: var(--ds-surface);
-}
-
-.geist-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.geist-table th {
-  padding: 10px 14px;
-  background-color: rgba(255, 255, 255, 0.01);
-  border-bottom: 1px solid var(--ds-border);
-  color: var(--ds-text-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.geist-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--ds-border-subtle);
-  color: var(--ds-text-secondary);
-  font-size: 13px;
-}
-
-.geist-table tr:last-child td {
-  border-bottom: none;
-}
-
-.geist-table tr:hover td {
-  background-color: var(--ds-surface-hover);
-  color: var(--ds-text-primary);
-}
-
-/* Neutral Buttons */
-.geist-btn {
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid var(--ds-border);
-  background-color: var(--ds-surface);
-  color: var(--ds-text-primary);
-  transition: all 0.1s ease;
-}
-
-.geist-btn:hover {
-  background-color: var(--ds-surface-hover);
-  border-color: var(--ds-text-secondary);
-}
-
-.geist-btn-primary {
-  background-color: var(--ds-text-primary);
-  color: var(--ds-background);
-  border: 1px solid var(--ds-text-primary);
-}
-
-.geist-btn-primary:hover {
-  background-color: #e5e5e5;
-}
-
-.geist-badge {
-  display: inline-block;
-  background-color: #171717;
-  border: 1px solid var(--ds-border);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-family: var(--font-mono);
-  color: var(--ds-text-secondary);
-}
-
-/* Modal Window */
-.geist-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.geist-modal {
-  width: 440px;
-  background-color: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  border-radius: 6px;
+.story-card {
+  background-color: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
   padding: 20px;
+  font-size: 19px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.story-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+/* Caregiver Management Mode Table (Hidden by default) */
+.caregiver-panel {
+  background-color: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.senior-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 16px;
 }
 
-.field-label {
-  font-size: 11px;
-  font-family: var(--font-mono);
-  color: var(--ds-text-muted);
+.senior-table th {
+  padding: 12px;
+  border-bottom: 2px solid var(--border);
+  color: var(--text-muted);
+  font-size: 14px;
   text-transform: uppercase;
 }
 
-.field-input {
-  padding: 8px 10px;
-  background-color: var(--ds-background);
-  border: 1px solid var(--ds-border);
-  border-radius: 4px;
-  color: var(--ds-text-primary);
-  font-size: 13px;
-  outline: none;
-}
-
-.field-input:focus {
-  border-color: var(--ds-text-primary);
+.senior-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
 }

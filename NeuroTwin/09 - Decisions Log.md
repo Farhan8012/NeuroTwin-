@@ -22,15 +22,20 @@ Future architectural decisions must follow the established format:
 
 ## Architectural Decision Records
 
+> [!decision] ADR #6: Senior Patient & Memory-Impaired Accessibility UI Standard
+> **Date:** 2026-08-19  
+> **Alternatives considered:** Technical developer dashboards with small fonts and dense metric tables as default view.  
+> **Rationale:** The end-user operating the mobile device is an elderly patient with memory impairment. The UI defaults to **Senior Patient Mode**: 32px–36px bold headlines, 20px readable story text, 72px+ massive touch action buttons, large family photo cards, and zero technical jargon. Developer metrics and caregiver tables are relegated behind a toggleable Caregiver Mode.
+
 > [!decision] ADR #5: FastAPI Backend Modular Router Architecture
 > **Date:** 2026-08-19  
 > **Alternatives considered:** Single monolith `main.py` script.  
 > **Rationale:** Structuring the backend into modular APIRouters (`app/routers/health.py`, `frame.py`, `voice.py`, `people.py`) located under `backend/` decouples vision processing, STT/TTS voice synthesis, database CRUD, and health telemetry, simplifying maintenance and unit testing.
 
-> [!decision] ADR #4: Caregiver Portal Platform — Minimalist Web Application
+> [!decision] ADR #4: Caregiver Portal Platform — Web Application with Caregiver Toggle
 > **Date:** 2026-08-19  
 > **Alternatives considered:** Secondary Android UI screen mode inside patient app; separate native mobile app.  
-> **Rationale:** A web dashboard accessible on desktop, tablet, or mobile browsers allows caregivers to comfortably type long memory stories, upload reference photos, and inspect real-time system logs. Designed via Stitch MCP using an ultra-minimalist, professional monochromatic slate design system (`web/`). Resolves Open Question #2.
+> **Rationale:** A web dashboard accessible on desktop, tablet, or mobile browsers allows caregivers to comfortably type long memory stories, upload reference photos, and inspect real-time system logs. Designed with dual Patient/Caregiver mode toggle. Resolves Open Question #2.
 
 > [!decision] ADR #3: Processing split: local pre-filter + server-side heavy AI
 > **Date:** 2026-08-19  
@@ -50,7 +55,6 @@ Future architectural decisions must follow the established format:
 ---
 
 ## Related Documentation
-- [[02 - Architecture Overview]] — System architecture resulting from these decisions.
-- [[07 - Caregiver App]] — Caregiver portal specification.
-- [[08 - Tech Stack]] — Final hardware and software stack selections.
-- [[15 - Original Concept (Archived)]] — Initial Raspberry Pi design reference.
+- [[01 - Product Idea]] — Senior accessibility guidelines.
+- [[03 - Mobile Client (Android)]] — Native Compose UI implementation.
+- [[07 - Caregiver App]] — Dual-mode Caregiver application.

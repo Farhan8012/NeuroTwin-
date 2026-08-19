@@ -12,14 +12,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,7 +36,7 @@ class MainActivity : ComponentActivity() {
         if (cameraGranted) {
             startCameraService()
         } else {
-            Toast.makeText(this, "Camera permission is required for ambient recognition", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Camera permission is required for ambient memory recognition", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -47,14 +45,12 @@ class MainActivity : ComponentActivity() {
         checkAndRequestPermissions()
 
         setContent {
-            NeuroTwinAppTheme {
+            NeuroTwinTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF0B0D12)
+                    color = Color(0xFF090A0F)
                 ) {
-                    NeuroTwinMainScreen(
-                        onTriggerVoice = { query -> sendVoiceQuery(query) }
-                    )
+                    SeniorPatientMainScreen()
                 }
             }
         }
@@ -68,14 +64,9 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
-        }
-
         val missing = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
-
         if (missing.isNotEmpty()) {
             permissionLauncher.launch(missing.toTypedArray())
         } else {
@@ -91,172 +82,135 @@ class MainActivity : ComponentActivity() {
             startService(intent)
         }
     }
-
-    private fun sendVoiceQuery(query: String) {
-        // Coroutine api call demo
-    }
 }
 
 @Composable
-fun NeuroTwinAppTheme(content: @Composable () -> Unit) {
+fun NeuroTwinTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            background = Color(0xFF0B0D12),
-            surface = Color(0xFF12151E),
-            primary = Color(0xFFF0F3F8),
-            secondary = Color(0xFF9DA6B8)
+            background = Color(0xFF090A0F),
+            surface = Color(0xFF131622),
+            primary = Color(0xFFFFFFFF),
+            secondary = Color(0xFFC5CBD8)
         ),
         content = content
     )
 }
 
 @Composable
-fun NeuroTwinMainScreen(onTriggerVoice: (String) -> Unit) {
-    var lastMatchPerson by remember { mutableStateOf("Sarah Varma (Daughter)") }
-    var lastMatchConfidence by remember { mutableStateOf("94%") }
-    var gateStatus by remember { mutableStateOf("ML Kit Gate: Face Detected (1.5 fps)") }
-    var voiceResponseText by remember { mutableStateOf("This is your daughter Sarah. She visited you yesterday afternoon and brought your favorite blueberry muffins.") }
-    var isProcessing by remember { mutableStateOf(false) }
+fun SeniorPatientMainScreen() {
+    var recognizedPerson by remember { mutableStateOf("Sarah Varma") }
+    var relationship by remember { mutableStateOf("Your Daughter") }
+    var summaryText by remember { mutableStateOf("Sarah is standing near you. She visited you yesterday afternoon and brought your favorite blueberry muffins.") }
+    var isQuerying by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(20.dp),
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header Status
+        // App Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(Color(0xFF3FB950), shape = CircleShape)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "NeuroTwin Mobile Client",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFF0F3F8)
-                )
-            }
             Text(
-                text = "FastAPI: Connected",
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                color = Color(0xFF626B7D)
+                text = "NeuroTwin Companion",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
 
-        // Camera Frame Card
+        // Senior Hero Recognized Person Card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(280.dp)
-                .border(1.dp, Color(0xFF242936), RoundedCornerShape(12.dp)),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF12151E))
+                .border(2.dp, Color(0xFF2C334A), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2030))
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp, 130.dp)
-                            .border(1.5.dp, Color(0xFFF0F3F8), RoundedCornerShape(6.dp)),
-                        contentAlignment = Alignment.TopStart
-                    ) {
-                        Text(
-                            text = lastMatchConfidence,
-                            fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF0B0D12),
-                            modifier = Modifier
-                                .background(Color(0xFFF0F3F8), RoundedCornerShape(2.dp))
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Active Face Match: $lastMatchPerson",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFFF0F3F8)
-                    )
-                    Text(
-                        text = gateStatus,
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = Color(0xFF9DA6B8)
-                    )
-                }
-            }
-        }
-
-        // Voice Response Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, Color(0xFF242936), RoundedCornerShape(12.dp)),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF181C27))
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    text = "EARPIECE AUDIO SPEECH RESPONSE",
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = Color(0xFF626B7D)
+                    text = relationship.uppercase(),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFBBF24),
+                    modifier = Modifier
+                        .background(Color(0x26FBBF24), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "\"$voiceResponseText\"",
-                    fontSize = 14.sp,
-                    color = Color(0xFFF0F3F8),
-                    lineHeight = 20.sp
+                    text = recognizedPerson,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = summaryText,
+                    fontSize = 18.sp,
+                    color = Color(0xFFC5CBD8),
+                    lineHeight = 26.sp
                 )
             }
         }
 
-        // Patient Voice Question Action Button
-        Button(
-            onClick = {
-                scope.launch {
-                    isProcessing = true
-                    try {
-                        val res = RetrofitClient.instance.sendVoiceQuery(VoiceRequest("Who is she?"))
-                        if (res.isSuccessful) {
-                            voiceResponseText = res.body()?.llm_response ?: voiceResponseText
-                        }
-                    } catch (e: Exception) {
-                        // Fallback simulated response
-                    } finally {
-                        isProcessing = false
-                    }
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF0F3F8))
+        // Massive 70px Height Action Buttons
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = if (isProcessing) "Processing Speech..." else "Ask Companion: \"Who is she?\"",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF0B0D12)
-            )
+            Button(
+                onClick = {
+                    scope.launch {
+                        isQuerying = true
+                        try {
+                            val res = RetrofitClient.instance.sendVoiceQuery(VoiceRequest("Who is she?"))
+                            if (res.isSuccessful) {
+                                summaryText = res.body()?.llm_response ?: summaryText
+                            }
+                        } catch (e: Exception) {
+                            // Fallback
+                        } finally {
+                            isQuerying = false
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(72.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+            ) {
+                Text(
+                    text = if (isQuerying) "Listening..." else "🎙️  Tap to Ask a Question",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF090A0F)
+                )
+            }
+
+            Button(
+                onClick = { /* Play music */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF131622))
+            ) {
+                Text(
+                    text = "🎵  Play Sarah's Song: \"You Are My Sunshine\"",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+            }
         }
     }
 }
