@@ -7,6 +7,7 @@ from app.schemas import FrameProcessResponse
 from app.services.face_service import face_service
 from app.services.object_service import object_detection_service
 from app.services import qdrant_service, context_cache
+from app.routers.metrics import record_frame_upload, record_face_match, record_face_miss
 
 router = APIRouter(prefix="/frame", tags=["Vision Pipeline"])
 
@@ -50,6 +51,13 @@ async def process_incoming_frame(
         detected_objects.append({"class": det["object_class"], "label": det["label"], "confidence": det["confidence"]})
 
     processing_ms = round((time.time() - start_time) * 1000, 2)
+
+    # Record metrics
+    record_frame_upload(time.time() - start_time)
+    if matched:
+        record_face_match()
+    else:
+        record_face_miss()
 
     return FrameProcessResponse(
         matched=matched,

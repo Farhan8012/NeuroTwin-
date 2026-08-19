@@ -1,0 +1,22 @@
+# NeuroTwin Prometheus Configuration
+# Scrapes the FastAPI /metrics endpoint every 15s
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "neurotwin-backend"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["backend:8000"]
+        labels:
+          service: "neurotwin-backend"
+          environment: "production"
+
+  - job_name: "neurotwin-qdrant"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["qdrant:6333"]
+        labels:
+          service: "neurotwin-qdrant"

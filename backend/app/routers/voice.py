@@ -9,6 +9,7 @@ from app.schemas import VoiceQueryRequest, VoiceQueryResponse
 from app.services.llm_service import llm_service
 from app.services import tts_service, stt_service, context_cache
 from app.config import settings
+from app.routers.metrics import record_voice_query
 
 router = APIRouter(prefix="/voice-query", tags=["Voice Pipeline"])
 logger = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ async def process_voice_query(request: VoiceQueryRequest):
 
     tts_audio_url = await _synthesize_tts(response_text)
     processing_ms = round((time.time() - start_time) * 1000, 2)
+    record_voice_query(time.time() - start_time)
 
     return VoiceQueryResponse(
         transcript=request.patient_query,
@@ -93,6 +95,7 @@ async def process_voice_audio(
 
     tts_audio_url = await _synthesize_tts(response_text)
     processing_ms = round((time.time() - start_time) * 1000, 2)
+    record_voice_query(time.time() - start_time)
 
     return VoiceQueryResponse(
         transcript=patient_query,
