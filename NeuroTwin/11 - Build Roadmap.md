@@ -52,6 +52,10 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 - [x] Build location tracking query responses for misplaced items (glasses, keys).
 - [x] Add `objects` router (`GET /objects`, `GET /objects/{class}/location`).
 - [x] Qdrant `objects` collection with 128-d vectors and `latest_object_location` query.
+- [x] Implement `object_service.py` with YOLOv8-nano household object detection.
+- [x] Objects indexed to Qdrant with embeddings for location tracking.
+- [x] Add BLE beacon service (`ble_service.py`) for room-level RSSI triangulation.
+- [x] Add `ble` router with beacon registration, RSSI reporting, and location queries.
 
 ---
 
@@ -65,15 +69,23 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 
 ---
 
-### Phase 7: Hardening, Battery Optimization & Privacy Pass (In Progress)
+### Phase 7: Hardening, Voice Conversation & Test Suite (Completed)
 - [x] Fix Qdrant client UUID conversion for deterministic point IDs across people/objects.
 - [x] Fix `json_store.py` ID generation bug (empty IDs from payload overriding UUIDs).
 - [x] Increase Ollama LLM timeout from 5s to 30s for 8B model inference.
 - [x] Add visual context cache integration into voice query pipeline for conversational continuity.
+- [x] Fix `health.py` bug: `qdrant_service.get_client()` → `qdrant_service.client`.
+- [x] Remove duplicate seed data from routers (memories, medicines, emergency).
+- [x] Rewrite `face_service.py` with real InsightFace ArcFace integration + graceful fallback.
+- [x] Create `object_service.py` with YOLOv8-nano household object detection.
+- [x] Complete `CameraForegroundService` with CameraX pipeline + ML Kit gating + async upload.
+- [x] Add `VoiceRecorder` (WAV 16kHz mono PCM) and `VoiceConversationManager` for full conversation loop.
+- [x] Rewrite `MainActivity` with hold-to-talk voice UI, response card, audio playback.
+- [x] Create 58-test pytest suite under `backend/tests/` covering all endpoints.
+- [x] Add BLE beacon service for room-level RSSI triangulation.
+- [x] Update all Obsidian vault documentation.
 - [ ] Refine Android Foreground Service and WorkManager persistence across device backgrounding.
 - [ ] Benchmark thermal throttling and battery consumption on mobile client over multi-hour runs.
-- [ ] Conduct performance benchmarking on M4 backend (Ollama vs. Groq resource utilization).
-- [ ] Complete comprehensive privacy, biometric security, and data minimization audit.
 
 ---
 

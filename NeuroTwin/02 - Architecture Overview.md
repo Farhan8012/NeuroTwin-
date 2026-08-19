@@ -72,6 +72,8 @@ flowchart TD
 - **Compute Offloading:** Heavy ML operations (Whisper, LLM, InsightFace, YOLO, TTS) reside strictly on the server to prevent mobile thermal throttling and excessive battery drain.
 - **Edge Data Minimization:** Video frames without detected interest are dropped on-device before hitting the network, protecting privacy and keeping server load low.
 - **Decoupled Messaging:** Asynchronous processing allows frame analysis and voice processing to run independently without blocking the UI thread.
+- **Hybrid Detection:** Visual (YOLO) and radio (BLE) detection complement each other. YOLO catches objects in camera view; BLE provides room-level location when objects are out of frame.
+- **Privacy-First Audio:** Voice recordings are processed ephemerally — WAV files are deleted immediately after Whisper transcription. No audio is stored long-term.
 
 ---
 

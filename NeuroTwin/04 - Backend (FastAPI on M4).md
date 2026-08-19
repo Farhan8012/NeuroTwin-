@@ -41,7 +41,9 @@ backend/
     ├── schemas.py              # Request/Response Pydantic models
     ├── services/
     │   ├── qdrant_service.py   # Qdrant vector DB (UUID conversion, people+objects)
-    │   ├── face_service.py     # InsightFace buffalo_l 512-d embedding extraction
+    │   ├── face_service.py     # InsightFace buffalo_l 512-d embedding (graceful fallback)
+    │   ├── object_service.py   # YOLOv8-nano household object detection
+    │   ├── ble_service.py      # BLE beacon RSSI triangulation for room-level tracking
     │   ├── stt_service.py      # faster-whisper base (CPU int8) transcription
     │   ├── llm_service.py      # Ollama Qwen3-8B / Groq Llama 3 reasoning
     │   ├── tts_service.py      # Piper en_US-lessac-medium WAV synthesis
@@ -50,13 +52,14 @@ backend/
     │   └── json_store.py       # Generic JSON CRUD store (memories, meds, contacts)
     └── routers/
         ├── health.py           # GET /api/v1/health (real telemetry)
-        ├── frame.py            # POST /api/v1/frame (face match + context cache)
+        ├── frame.py            # POST /api/v1/frame (face match + YOLO objects + context cache)
         ├── voice.py            # POST /api/v1/voice-query (JSON) + /audio (multipart)
         ├── people.py           # /api/v1/people CRUD + photo→vector indexing
         ├── memories.py         # /api/v1/memories CRUD (persistent JSON)
         ├── medicines.py        # /api/v1/medicines CRUD (persistent JSON)
         ├── emergency.py        # /api/v1/emergency-contacts CRUD (persistent JSON)
-        └── objects.py          # /api/v1/objects list + location query
+        ├── objects.py          # /api/v1/objects list + location query
+        └── ble.py              # /api/v1/ble beacon registration + RSSI reporting
 ```
 
 ---
@@ -80,6 +83,17 @@ backend/
 | `DELETE` | `/api/v1/emergency-contacts/{id}` | Delete contact | None | 204 | ✅ Tested |
 | `GET` | `/api/v1/objects` | List tracked objects | None | `Object[]` | ✅ Tested |
 | `GET` | `/api/v1/objects/{class}/location` | Last-seen location for object class | None | `ObjectLocation` | ✅ Tested |
+| `GET` | `/api/v1/ble/beacons` | List registered BLE beacons | None | `BeaconResponse[]` | ✅ Tested |
+| `POST` | `/api/v1/ble/beacons` | Register BLE beacon tag | `BeaconRegister` | `BeaconResponse` | ✅ Tested |
+| `DELETE` | `/api/v1/ble/beacons/{id}` | Remove registered beacon | None | 204 | ✅ Tested |
+| `POST` | `/api/v1/ble/rssi` | Submit RSSI reading for room estimation | `RSSIReport` | `LocationResponse` | ✅ Tested |
+| `GET` | `/api/v1/ble/beacons/{id}/location` | Get current beacon location | None | `LocationResponse` | ✅ Tested |
+
+---
+
+## Test Suite
+
+58 pytest tests under `backend/tests/` covering all endpoints, CRUD lifecycle, integration flows, and BLE triangulation.
 
 ---
 

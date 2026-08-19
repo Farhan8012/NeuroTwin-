@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.auth import APIKeyMiddleware
-from app.routers import health, frame, voice, people, memories, medicines, emergency, objects
+from app.routers import health, frame, voice, people, memories, medicines, emergency, objects, ble
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -31,6 +31,7 @@ app.include_router(memories.router, prefix=settings.API_V1_STR)
 app.include_router(medicines.router, prefix=settings.API_V1_STR)
 app.include_router(emergency.router, prefix=settings.API_V1_STR)
 app.include_router(objects.router, prefix=settings.API_V1_STR)
+app.include_router(ble.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():

@@ -36,14 +36,20 @@ Voice Path:   Audio ──> Whisper STT ───────> Transcript ──
 
 ---
 
-## 2. Object Recognition Flow
+## 2. Object Recognition Flow (✅ Integrated)
 
 1. **YOLO Detection:**
-   - For object queries (e.g., *"Where are my glasses?"* or *"Where did I put my keys?"*), frames are passed through **YOLO** (YOLOv8/v9). *Integration pending (Phase 5).*
-2. **Spatial & Temporal Tracking:**
-   - When key items (glasses, keys, wallet, pill bottle) are detected in frames, the backend logs the detected class, bounding box, timestamp, and room/environmental context into the Qdrant `objects` collection.
+   - `object_service.py` runs **YOLOv8-nano** on every uploaded frame. Detects household objects: phone, remote, book, cup, bottle, scissors, chair, TV, laptop, and potted plant.
+   - Target classes are filtered to items relevant for memory-impaired patients (defined in `TARGET_CLASSES` dict).
+   - Graceful fallback: if `ultralytics` is not installed, detection returns empty list and the frame still processes for face recognition.
+2. **Embedding & Storage:**
+   - Each detected object is cropped from the frame and converted to a 128-d embedding (normalized pixel features).
+   - Objects are indexed into Qdrant's `objects` collection with `object_class`, `label`, `confidence`, and `last_seen_timestamp`.
 3. **Retrieval Strategy:**
-   - When a patient asks about an object's location, the backend fetches the most recent logged location record for that object class (`app/services/qdrant_service.py::latest_object_location`).
+   - When a patient asks about an object's location, the backend fetches the most recent logged location record via `qdrant_service.latest_object_location()`.
+4. **BLE Enhancement (optional):**
+   - For higher-accuracy room-level tracking, BLE beacons can be attached to objects. See `ble_service.py` for RSSI triangulation across fixed receiver beacons.
+   - BLE data supplements visual detection — if an object has a registered beacon, its room location is updated via `POST /api/v1/ble/rssi`.
 
 ---
 
@@ -76,17 +82,19 @@ The system prompt strictly governs the tone and personality of the LLM:
 
 ---
 
-## Open Decision: LLM Engine Choice
+## LLM Engine: Resolved
 
-> [!question] LLM: Groq Cloud API vs. Local Ollama Qwen3-8B
-> - **Groq-Hosted Llama 3:** Extremely fast inference, free tier availability, offloads compute from the M4 server. Requires active internet connection and transmits voice transcripts off-device.
-> - **Local Ollama + Qwen3-8B:** 100% private LAN operation, self-hosted independence, zero cloud reliance. Competes directly for M4 CPU/GPU memory resources alongside Qdrant, InsightFace, YOLO, Whisper, and TTS.
-> 
-> **Decision Rule:** Benchmark both approaches under full concurrent pipeline load once the backend skeleton is complete.
+> [!done] Decision: Ollama Qwen3-8B (Default)
+> Local **Ollama Qwen3-8B** (Q4_K_M quantization, 8.2B parameters) runs as the default LLM provider.
+> - **Latency:** ~11-15s per response on M4 MacBook Air.
+> - **Privacy:** 100% local LAN — no data leaves the device.
+> - **Fallback:** When Ollama is offline, `llm_service.py` returns warm rule-based responses (e.g., "This is your daughter Sarah...").
+> - **Alternative:** Groq Llama 3 API supported via `LLM_PROVIDER=groq` config. Faster but requires internet and sends transcripts off-device.
 
 ---
 
 ## Related Documentation
 - [[04 - Backend (FastAPI on M4)]] — Server orchestrator executing model tasks.
 - [[06 - Data Model (Qdrant Schema)]] — Vector payload structure for matched entities.
-- [[12 - Open Questions]] — Master list of unresolved architectural decisions.
+- [[03 - Mobile Client (Android)]] — Mobile voice conversation and BLE scanning.
+- [[11 - Build Roadmap]] — Implementation phases.

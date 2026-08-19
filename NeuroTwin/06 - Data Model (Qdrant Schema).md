@@ -115,6 +115,32 @@ The `objects` collection tracks known physical items (e.g., reading glasses, car
 
 ---
 
+## 3. BLE Beacon Tracking (JSON Store)
+
+BLE beacon data is stored in persistent JSON files (not Qdrant vectors) for lightweight lookup:
+
+- `data/ble_beacons.json` — Registry of beacon tags attached to objects.
+- `data/ble_rssi_log.json` — Rolling RSSI readings from mobile app scans.
+
+### Beacon Registry Schema
+```json
+{
+  "id": "BLE-GLASSES-001",
+  "object_class": "reading_glasses",
+  "label": "Blue Reading Glasses",
+  "registered_at": 1724073600.0
+}
+```
+
+### RSSI Triangulation Flow
+1. Mobile app scans for BLE beacons and reports RSSI values to `POST /api/v1/ble/rssi`.
+2. Backend groups readings by receiver (fixed room beacons), calculates median RSSI per receiver.
+3. RSSI is converted to estimated distance using the log-distance path loss model: `d = 10^((REF_RSSI - rssi) / (10 * n))`.
+4. Room is determined by closest receiver beacon. Confidence is based on distance ratio between top receivers.
+5. If the beacon is registered, its location is also written to Qdrant's `objects` collection for unified querying.
+
+---
+
 ## Payload Indexing & Performance Strategy
 
 To ensure sub-millisecond retrieval on the M4 server:

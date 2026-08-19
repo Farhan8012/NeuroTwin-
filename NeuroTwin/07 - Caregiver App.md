@@ -34,15 +34,27 @@ The frontend ships as an **accessible dual-mode SPA**: a large-type **Patient Mo
 
 ---
 
-## Design System: Vercel Geist Neutral Monochromatic Standard (Zero AI Slop)
+## Design System: Senior Accessibility + Dark Theme
 
-> [!decision] Vercel Geist Grayscale Standard (ADR #4)
-> Grounded in official Vercel Geist design system specifications, the Caregiver Portal strictly eliminates all colored accent text (such as artificial green status pills or blue decorative badges).
+> [!decision] Senior Patient Accessibility Standard (ADR #4)
+> The UI follows a strict senior-accessibility-first design with high-contrast dark theme.
 > 
-> **Geist Visual Principles Applied:**
-> - **Strict Grayscale Palette:** Pure dark canvas (`#0a0a0a`), surface cards (`#121212`), 1px solid dividers (`#262626`), near-white text (`#fafafa`), and neutral muted labels (`#737373`).
-> - **Geist Typography:** `Geist` for UI text and `Geist Mono` for tabular vectors, IDs, timestamps, and data columns.
-> - **Zero Slop Restraint:** 0 colorful text highlights or AI template glows. Status indicators rely on neutral grayscale badges (`#171717`).
+> **Visual Principles Applied:**
+> - **72px Touch Targets:** All action buttons meet minimum 76px height for motor-impaired users.
+> - **32px Headers:** Large type hierarchy for readability.
+> - **Dark Canvas:** `#09090b` background with `#1c2030` card surfaces and `#fbbf24` gold accents for critical actions.
+> - **Inter Font:** Clean sans-serif for maximum legibility.
+> - **Caregiver Toggle:** Single button switches between Patient Mode (simple) and Caregiver Mode (5-tab management).
+
+## BLE Beacon Integration
+
+The caregiver portal supports registering BLE beacon tags for room-level object tracking:
+
+1. Register a beacon with `object_class` (e.g., "reading_glasses") and attach it to a physical object.
+2. Place fixed receiver beacons in rooms (Living Room, Kitchen, Bedroom, Hallway).
+3. The mobile app scans for beacons and reports RSSI values to `POST /api/v1/ble/rssi`.
+4. Backend triangulates room location using log-distance path loss model.
+5. Object location appears in the Telemetry tab alongside visual detection data.
 
 ---
 

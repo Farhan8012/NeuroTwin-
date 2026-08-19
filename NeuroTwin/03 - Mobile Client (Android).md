@@ -30,13 +30,15 @@ mobile/
     └── src/main/
         ├── AndroidManifest.xml
         └── java/com/neurotwin/app/
-            ├── MainActivity.kt               # Jetpack Compose UI
+            ├── MainActivity.kt               # Jetpack Compose UI + voice conversation
             ├── ml/
             │   └── MlKitFilter.kt            # Local ML Kit Face Detection Gating
             ├── network/
             │   └── NeuroTwinApiService.kt    # Retrofit client for FastAPI backend
             └── service/
-                └── CameraForegroundService.kt # Foreground service keeping camera active
+                ├── CameraForegroundService.kt  # CameraX pipeline + ML Kit gating + upload
+                ├── VoiceRecorder.kt             # WAV recording (16kHz mono PCM)
+                └── VoiceConversationManager.kt  # Full record→send→play conversation loop
 ```
 
 ---
@@ -57,7 +59,20 @@ mobile/
 4. **Network Service (`RetrofitClient`):**
    - Connects to the FastAPI backend (`http://10.0.2.2:8000/` for emulator loopback or host LAN IP).
    - Supports optional API key authentication via `X-API-Key` header interceptor.
-   - Two voice endpoints: `sendVoiceQuery()` (JSON body) and `sendVoiceAudio()` (multipart audio upload for server-side Whisper STT).
+   - Three endpoints: `uploadFrame()` (multipart image), `sendVoiceQuery()` (JSON body), `sendVoiceAudio()` (multipart audio for Whisper STT).
+
+5. **Voice Conversation (`VoiceConversationManager`):**
+   - Full record → send → play loop for direct patient-to-model conversation.
+   - `VoiceRecorder` captures 16kHz mono PCM audio and writes WAV files.
+   - User holds the big red button to record → lifts finger to send.
+   - Audio is uploaded to `POST /api/v1/voice-query/audio` where server runs Whisper STT → Ollama LLM → Piper TTS.
+   - Response audio is played back through the device speaker or Bluetooth earpiece.
+   - Falls back to text query via `sendVoiceQuery()` when microphone is unavailable.
+
+6. **UI State Management:**
+   - Animated button states: Recording (red) → Thinking (sending) → Playing (response).
+   - Response card displays LLM text with audio playback button.
+   - Quick-action text buttons for common queries ("Who is this?", "Where are my glasses?").
 
 ---
 
