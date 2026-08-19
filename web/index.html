@@ -3,195 +3,408 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NeuroTwin — Caregiver & Memory Portal</title>
+  <title>NeuroTwin — Caregiver Instrumentation</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="brand-container">
-      <div class="brand-icon">NT</div>
-      <div class="brand-title">NeuroTwin</div>
+  <!-- Top Header Navigation -->
+  <header class="top-nav">
+    <div class="brand-section">
+      <span class="brand-badge">NT</span>
+      <span class="brand-name">NEUROTWIN</span>
+      <span style="color: var(--text-low); font-family: var(--font-mono); font-size: 11px;">/ CAREGIVER PORTAL</span>
     </div>
-    
-    <ul class="nav-list">
-      <li class="nav-item active" onclick="switchTab('overview')">
-        <span>Overview & Live Monitor</span>
-      </li>
-      <li class="nav-item" onclick="switchTab('people')">
-        <span>Registered People & Memories</span>
-      </li>
-      <li class="nav-item" onclick="switchTab('medicines')">
-        <span>Medications & Schedule</span>
-      </li>
-      <li class="nav-item" onclick="switchTab('logs')">
-        <span>System Telemetry & Logs</span>
-      </li>
-    </ul>
 
-    <div class="sidebar-footer">
-      <div>Host: Apple M4 MacBook</div>
-      <div style="margin-top: 4px;">Engine: FastAPI + Qdrant</div>
-    </div>
-  </aside>
+    <!-- 5 Feature Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('tab-monitor', this)">
+        <span class="tab-num">01</span> Ambient Monitor
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-people', this)">
+        <span class="tab-num">02</span> People & Biometrics
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-memories', this)">
+        <span class="tab-num">03</span> Memory Repository
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-medical', this)">
+        <span class="tab-num">04</span> Medical & Emergency
+      </button>
+      <button class="tab-btn" onclick="switchTab('tab-telemetry', this)">
+        <span class="tab-num">05</span> System Telemetry
+      </button>
+    </nav>
 
-  <!-- Main Wrapper -->
-  <div class="main-wrapper">
-    <!-- Header Bar -->
-    <header class="header-bar">
-      <div class="header-title" style="font-weight: 500;">Caregiver Portal • Patient Companion Mode</div>
-      <div class="header-status">
-        <div class="status-badge">
-          <span class="status-dot"></span>
-          <span>Mobile Client: Connected (1.5 fps)</span>
-        </div>
-        <div class="server-metric" id="live-clock">17:53:00 UTC</div>
+    <div class="status-section">
+      <div class="indicator-pill">
+        <span class="indicator-dot"></span>
+        <span>CLIENT ACTIVE (1.5 FPS)</span>
       </div>
-    </header>
+      <span style="color: var(--text-low);" id="clock-display">18:01:00 UTC</span>
+    </div>
+  </header>
 
-    <!-- Content Body: Tab 1 (Overview) -->
-    <main class="content-body" id="tab-overview">
-      <div class="section-header">
+  <div class="app-container">
+
+    <!-- ================= TAB 1: AMBIENT MONITOR ================= -->
+    <main class="tab-content" id="tab-monitor">
+      <div class="header-title-bar">
         <div>
-          <h1 class="page-title">Ambient Vision & Memory Context</h1>
-          <p class="page-subtitle">Real-time passive observation, facial vector matching, and active memory payloads.</p>
+          <h1 class="title-text">Live Ambient Vision & Speech Monitor</h1>
+          <p class="subtitle-text">Passive CameraX frame evaluation, ML Kit gate status, and Qdrant vector retrieval stream.</p>
         </div>
-        <button class="btn btn-primary" onclick="triggerTestVoiceQuery()">Simulate Voice Query</button>
+        <button class="btn btn-primary" onclick="simulateVoiceQuery()">Simulate Voice Query: "Who is she?"</button>
       </div>
 
-      <!-- Two Column Monitor Grid -->
-      <div class="grid-two-col">
-        <!-- Live Camera Stream Monitor -->
-        <div class="card">
-          <div class="card-title">
-            <span>CameraX Live Stream (On-Device ML Kit Gated)</span>
-            <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">STREAM_ID: #CAM-0821</span>
+      <div class="grid-main-split">
+        <!-- Live Camera Stream Frame -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">CameraX Frame Stream (#CAM-0821)</span>
+            <span style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-green);">ML KIT: FACE_DETECTED</span>
           </div>
+          <div class="panel-body">
+            <div class="video-canvas">
+              <div class="bounding-box">
+                <div class="bounding-tag">Sarah Varma • 0.9421</div>
+              </div>
+              <div style="position: absolute; bottom: 8px; left: 10px; font-family: var(--font-mono); font-size: 10px; color: var(--text-low);">
+                GATING: ON-DEVICE ML KIT PASS ──> FASTAPI POST /FRAME
+              </div>
+            </div>
 
-          <div class="camera-box">
-            <div class="camera-grid-overlay"></div>
-            <div class="face-box-overlay">
-              <div class="face-label-tag">Sarah Varma • 94%</div>
-            </div>
-            <div style="position: absolute; bottom: 12px; left: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);">
-              Gating Rule: ML Kit Face Detected • Uploaded to FastAPI
-            </div>
-          </div>
-
-          <div class="meta-list">
-            <div class="meta-row">
-              <span class="meta-key">FACIAL EMBEDDING</span>
-              <span class="meta-val" style="font-family: var(--font-mono); font-size: 11px;">InsightFace 512-d (Cosine Similarity: 0.9421)</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-key">VECTOR INDEX</span>
-              <span class="meta-val" style="font-family: var(--font-mono); font-size: 11px;">Qdrant :: collection: people :: point_id: p_sarah_01</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-key">RETRIEVAL LATENCY</span>
-              <span class="meta-val" style="font-family: var(--font-mono); font-size: 11px;">42.5 ms (FastAPI on M4)</span>
-            </div>
+            <table class="kv-table">
+              <tr>
+                <td class="kv-key">FACE VECTOR</td>
+                <td class="kv-val" style="font-family: var(--font-mono); font-size: 11px;">InsightFace 512-d [0.024, -0.118, 0.452...]</td>
+              </tr>
+              <tr>
+                <td class="kv-key">COSINE SIMILARITY</td>
+                <td class="kv-val" style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-green);">0.9421 (Threshold >= 0.90)</td>
+              </tr>
+              <tr>
+                <td class="kv-key">OBJECT DETECTION</td>
+                <td class="kv-val" style="font-family: var(--font-mono); font-size: 11px;">reading_glasses (Living Room Coffee Table)</td>
+              </tr>
+            </table>
           </div>
         </div>
 
         <!-- Active Context Payload -->
-        <div class="card">
-          <div class="card-title">
-            <span>Active Retrieved Memory Context</span>
-            <span class="status-badge" style="background: rgba(78,142,255,0.1); color: var(--accent-soft);">Matched</span>
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Active Retained Memory Payload</span>
+            <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-low);">POINT_ID: p_sarah_01</span>
           </div>
+          <div class="panel-body">
+            <table class="kv-table">
+              <tr>
+                <td class="kv-key">NAME / RELATION</td>
+                <td class="kv-val" style="font-weight: 600;">Sarah Varma (Daughter)</td>
+              </tr>
+              <tr>
+                <td class="kv-key">RECENT VISIT</td>
+                <td class="kv-val">Yesterday at 3:30 PM</td>
+              </tr>
+              <tr>
+                <td class="kv-key">BIRTHDAY</td>
+                <td class="kv-val">April 14, 1992</td>
+              </tr>
+            </table>
 
-          <div class="meta-list">
-            <div class="meta-row">
-              <span class="meta-key">NAME & RELATIONSHIP</span>
-              <span class="meta-val">Sarah Varma (Daughter)</span>
+            <div>
+              <div class="form-label" style="margin-bottom: 6px;">RETRIEVED ANECDOTES & STORIES</div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="padding: 8px 10px; background: var(--bg); border: 1px solid var(--border-subtle); border-radius: 2px;">
+                  "Brought blueberry muffins during her visit yesterday."
+                </div>
+                <div style="padding: 8px 10px; background: var(--bg); border: 1px solid var(--border-subtle); border-radius: 2px;">
+                  "Loves taking walks in the botanical garden with you."
+                </div>
+              </div>
             </div>
-            <div class="meta-row">
-              <span class="meta-key">LAST VISIT</span>
-              <span class="meta-val">Yesterday at 3:30 PM</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-key">BIRTHDAY</span>
-              <span class="meta-val">April 14, 1992</span>
-            </div>
-          </div>
 
-          <div>
-            <div class="meta-key" style="margin-bottom: 6px;">EPISODIC MEMORIES & ANECDOTES</div>
-            <ul style="list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px;">
-              <li style="padding: 6px 10px; background: var(--bg-panel); border-radius: 4px; border: 1px solid var(--border-quiet);">
-                "Brought blueberry muffins during her visit yesterday."
-              </li>
-              <li style="padding: 6px 10px; background: var(--bg-panel); border-radius: 4px; border: 1px solid var(--border-quiet);">
-                "Loves taking walks in the botanical garden with you."
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <div class="meta-key" style="margin-bottom: 6px;">FAVORITE SONGS & HOBBIES</div>
-            <div class="tag-cloud">
-              <span class="tag">🎵 You Are My Sunshine</span>
-              <span class="tag">🎵 Here Comes the Sun</span>
-              <span class="tag">🌱 Gardening</span>
-              <span class="tag">🧁 Baking Pastries</span>
+            <div>
+              <div class="form-label" style="margin-bottom: 6px;">FAVORITE SONGS & HOBBIES</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                <span class="tag-item">You Are My Sunshine</span>
+                <span class="tag-item">Here Comes the Sun</span>
+                <span class="tag-item">Gardening</span>
+                <span class="tag-item">Baking</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Interaction History Log Table -->
-      <div class="card">
-        <div class="card-title">
-          <span>Recent Patient Voice Interactions</span>
-          <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">STT: Whisper • TTS: Piper</span>
+      <!-- Recent Patient Voice Interaction Table -->
+      <div class="table-container">
+        <div class="panel-header">
+          <span class="panel-title">Patient Voice Query Log</span>
+          <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-low);">WHISPER STT ──> PIPER TTS</span>
         </div>
-
-        <table class="data-table">
+        <table class="stark-table">
           <thead>
             <tr>
               <th>Timestamp</th>
-              <th>Spoken Question</th>
-              <th>Retrieved Context</th>
-              <th>Synthesized LLM Companion Response</th>
-              <th>Audio Playback</th>
+              <th>Spoken Query</th>
+              <th>Context Match</th>
+              <th>Generated Companion Response</th>
+              <th>Action</th>
             </tr>
           </thead>
-          <tbody id="voice-log-body">
+          <tbody id="voice-log-rows">
             <tr>
               <td style="font-family: var(--font-mono); font-size: 11px;">17:48:12</td>
-              <td style="font-weight: 500; color: var(--text-primary);">"Who is she?"</td>
+              <td style="font-weight: 500; color: var(--text-high);">"Who is she?"</td>
               <td>Sarah Varma (Daughter)</td>
               <td>"This is your daughter Sarah. She visited you yesterday afternoon and brought your favorite blueberry muffins."</td>
-              <td><button class="btn" style="padding: 2px 8px; font-size: 11px;">▶ Play Earpiece Audio</button></td>
+              <td><button class="btn" onclick="playAudioDemo()">Play Earpiece Audio</button></td>
             </tr>
             <tr>
               <td style="font-family: var(--font-mono); font-size: 11px;">16:30:05</td>
-              <td style="font-weight: 500; color: var(--text-primary);">"Where are my reading glasses?"</td>
-              <td>Object: reading_glasses</td>
+              <td style="font-weight: 500; color: var(--text-high);">"Where are my reading glasses?"</td>
+              <td>reading_glasses</td>
               <td>"Your blue reading glasses were last seen on the living room coffee table next to your book."</td>
-              <td><button class="btn" style="padding: 2px 8px; font-size: 11px;">▶ Play Earpiece Audio</button></td>
+              <td><button class="btn" onclick="playAudioDemo()">Play Earpiece Audio</button></td>
             </tr>
           </tbody>
         </table>
       </div>
     </main>
 
-    <!-- Content Body: Tab 2 (Registered People) -->
-    <main class="content-body" id="tab-people" style="display: none;">
-      <div class="section-header">
+    <!-- ================= TAB 2: PEOPLE & BIOMETRICS ================= -->
+    <main class="tab-content" id="tab-people" style="display: none;">
+      <div class="header-title-bar">
         <div>
-          <h1 class="page-title">Registered People & Memory Profiles</h1>
-          <p class="page-subtitle">Manage family members, upload photos for face embeddings, and log life stories.</p>
+          <h1 class="title-text">Registered People & Facial Biometrics</h1>
+          <p class="subtitle-text">Manage family profiles, facial embedding vectors in Qdrant, and relational metadata.</p>
         </div>
-        <button class="btn btn-primary" onclick="openAddPersonModal()">+ Add New Person</button>
+        <button class="btn btn-primary" onclick="openModal('modal-add-person')">+ Register New Person</button>
       </div>
 
-      <div class="grid-cards" id="people-cards-container">
-        <!-- Rendered dynamically by app.js -->
+      <div class="table-container">
+        <table class="stark-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Relationship</th>
+              <th>Birthday</th>
+              <th>Vector Index Status</th>
+              <th>Primary Memory Anchor</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="people-table-rows">
+            <!-- Rendered by app.js -->
+          </tbody>
+        </table>
       </div>
     </main>
+
+    <!-- ================= TAB 3: MEMORY REPOSITORY ================= -->
+    <main class="tab-content" id="tab-memories" style="display: none;">
+      <div class="header-title-bar">
+        <div>
+          <h1 class="title-text">Memory Anchors & Story Repository</h1>
+          <p class="subtitle-text">Life events, family anecdotes, voice notes, favorite places, and auditory anchors.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-add-memory')">+ Log New Memory Anchor</button>
+      </div>
+
+      <div class="table-container">
+        <table class="stark-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Person Binding</th>
+              <th>Title / Story Summary</th>
+              <th>Details & Voice Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="memory-table-rows">
+            <tr>
+              <td><span class="tag-item">Life Event</span></td>
+              <td style="font-weight: 500;">Sarah Varma</td>
+              <td>Graduated law school in 2016</td>
+              <td>"Attended commencement ceremony in San Francisco."</td>
+              <td><button class="btn">Edit</button></td>
+            </tr>
+            <tr>
+              <td><span class="tag-item">Anecdote</span></td>
+              <td style="font-weight: 500;">Sarah Varma</td>
+              <td>Caught first fish at Lake Tahoe</td>
+              <td>"Summer vacation when she was 8 years old."</td>
+              <td><button class="btn">Edit</button></td>
+            </tr>
+            <tr>
+              <td><span class="tag-item">Favorite Song</span></td>
+              <td style="font-weight: 500;">Sarah Varma</td>
+              <td>"You Are My Sunshine"</td>
+              <td>Used as soothing audio anchor during moments of hesitation.</td>
+              <td><button class="btn">Edit</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- ================= TAB 4: MEDICAL & EMERGENCY ================= -->
+    <main class="tab-content" id="tab-medical" style="display: none;">
+      <div class="header-title-bar">
+        <div>
+          <h1 class="title-text">Medications & Emergency Care Directory</h1>
+          <p class="subtitle-text">Active dosage schedules, prescribing physician context, and primary emergency contacts.</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn" onclick="openModal('modal-add-med')">+ Add Medication</button>
+          <button class="btn btn-primary" onclick="openModal('modal-add-contact')">+ Add Emergency Contact</button>
+        </div>
+      </div>
+
+      <div class="grid-main-split">
+        <!-- Medication Schedule -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Active Medication Schedule</span>
+          </div>
+          <div class="panel-body" style="padding: 0;">
+            <table class="stark-table">
+              <thead>
+                <tr>
+                  <th>Medication</th>
+                  <th>Dosage</th>
+                  <th>Schedule</th>
+                  <th>Instructions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="font-weight: 500; color: var(--text-high);">Donepezil</td>
+                  <td>10 mg</td>
+                  <td style="font-family: var(--font-mono); font-size: 11px;">08:00 AM Daily</td>
+                  <td>Take with breakfast water</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 500; color: var(--text-high);">Memantine</td>
+                  <td>10 mg</td>
+                  <td style="font-family: var(--font-mono); font-size: 11px;">08:00 PM Daily</td>
+                  <td>Take after evening meal</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Emergency Contacts -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Emergency Contact Directory</span>
+          </div>
+          <div class="panel-body" style="padding: 0;">
+            <table class="stark-table">
+              <thead>
+                <tr>
+                  <th>Contact Name</th>
+                  <th>Relationship</th>
+                  <th>Phone Number</th>
+                  <th>Primary</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="font-weight: 500; color: var(--text-high);">Sarah Varma</td>
+                  <td>Daughter</td>
+                  <td style="font-family: var(--font-mono); font-size: 11px;">+1 (555) 234-5678</td>
+                  <td><span class="tag-item" style="color: var(--accent-green);">PRIMARY</span></td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 500; color: var(--text-high);">Dr. Aris Thorne</td>
+                  <td>Neurologist</td>
+                  <td style="font-family: var(--font-mono); font-size: 11px;">+1 (555) 987-6543</td>
+                  <td><span class="tag-item">CLINIC</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ================= TAB 5: SYSTEM TELEMETRY ================= -->
+    <main class="tab-content" id="tab-telemetry" style="display: none;">
+      <div class="header-title-bar">
+        <div>
+          <h1 class="title-text">System Telemetry & Hardware Infrastructure</h1>
+          <p class="subtitle-text">M4 MacBook Air host resource usage, Qdrant vector count, and model latency telemetry.</p>
+        </div>
+        <button class="btn" onclick="fetchTelemetry()">Refresh Telemetry</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">M4 Backend Service Metrics</span>
+          <span style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-green);">ALL SYSTEMS NOMINAL</span>
+        </div>
+        <div class="panel-body">
+          <table class="kv-table">
+            <tr>
+              <td class="kv-key">HOST SERVER</td>
+              <td class="kv-val" style="font-family: var(--font-mono);">Apple M4 MacBook Air (macOS Sonoma)</td>
+            </tr>
+            <tr>
+              <td class="kv-key">FASTAPI WORKER</td>
+              <td class="kv-val" style="font-family: var(--font-mono);">Uvicorn asyncio loop (port 8000)</td>
+            </tr>
+            <tr>
+              <td class="kv-key">QDRANT VECTOR DB</td>
+              <td class="kv-val" style="font-family: var(--font-mono);">Connected (2 Collections: people [2 vectors], objects [5 vectors])</td>
+            </tr>
+            <tr>
+              <td class="kv-key">OLLAMA ENGINE</td>
+              <td class="kv-val" style="font-family: var(--font-mono);">Qwen3-8B active (RAM usage: 5.2 GB)</td>
+            </tr>
+            <tr>
+              <td class="kv-key">AVG INFERENCE LATENCY</td>
+              <td class="kv-val" style="font-family: var(--font-mono);">Vision: 42ms | Whisper STT: 110ms | LLM: 180ms | TTS: 65ms</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Modal Component: Add Person -->
+  <div class="modal-overlay" id="modal-add-person" style="display: none;">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 600;">Register New Person</span>
+        <button class="btn" onclick="closeModal('modal-add-person')">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" id="input-person-name" class="form-input" placeholder="e.g. Sarah Varma">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Relationship to Patient</label>
+        <input type="text" id="input-person-relation" class="form-input" placeholder="e.g. Daughter, Neighbor">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Birthday</label>
+        <input type="text" id="input-person-bday" class="form-input" placeholder="e.g. April 14, 1992">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Initial Memory Anecdote</label>
+        <input type="text" id="input-person-memory" class="form-input" placeholder="e.g. Brought blueberry muffins during her visit yesterday">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+        <button class="btn" onclick="closeModal('modal-add-person')">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAddPerson()">Save & Index Vector</button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

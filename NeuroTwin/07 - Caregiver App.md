@@ -16,65 +16,45 @@ Without the caregiver's input, the AI lacks the context required to transform fa
 
 ---
 
-## Full Feature Matrix
+## 5 Core Application Domains (Implemented in `web/`)
 
-1. **Family & Friend Profile Management:**
-   - Add, edit, or remove registered individuals.
-   - Upload high-resolution reference photos for initial face embedding extraction.
-   - Define exact relationship labels (e.g., *"Daughter"*, *"Primary Care Physician"*, *"Neighbor"*).
+1. **Tab 1: Ambient Vision & Speech Monitor:**
+   - Real-time CameraX video frame stream canvas.
+   - On-device ML Kit gating status (`FACE_DETECTED` pass-through indicator).
+   - Live InsightFace 512-d embedding & Qdrant Cosine Similarity score (`0.9421`).
+   - Active retained memory payload (Name, Relationship, Last Visit, Anecdotes, Favorite Songs).
+   - Patient Voice Query Log table with Whisper STT transcript, LLM story response, and Piper TTS audio trigger.
 
-2. **Memory & Story Management:**
-   - Log important life events, family stories, and personal anecdotes.
-   - Upload favorite songs, music playlists, favorite places, and personal hobbies.
-   - Record and attach audio voice notes from family members.
+2. **Tab 2: People & Biometrics Index:**
+   - Table of registered individuals with Qdrant vector status (`512-d INDEXED`).
+   - Modal form (`+ Register New Person`) to upload photos and index new vectors into Qdrant.
 
-3. **Medical & Emergency Management:**
-   - Maintain active medication schedules and dosage context.
-   - Manage emergency contacts and primary physician details.
+3. **Tab 3: Memory Anchors & Story Repository:**
+   - Categorized stories (Life Events, Anecdotes, Favorite Songs, Favorite Places, Hobbies).
+   - Form modal (`+ Log New Memory Anchor`).
 
-4. **Interaction Log & Telemetry Review:**
-   - Review recent patient interaction history (e.g., face detection logs, patient voice questions, AI responses).
-   - Flag incorrect face matches or misidentified relationship responses for retraining/updating.
+4. **Tab 4: Medical & Emergency Care Directory:**
+   - Active medication schedule table (Medication Name, Dosage, Schedule Time, Instructions).
+   - Emergency contact directory with primary contact badges.
 
----
-
-## Caregiver Data Write Path
-
-When a caregiver enters new information via the app, the data flows through the following pipeline:
-
-```
-[ Caregiver Uploads Photo & Story ]
-              │
-              ▼
-[ FastAPI Backend Endpoint POST /people ]
-              │
-              ▼
-[ InsightFace Generates 512-d Embedding ]
-              │
-              ▼
-[ Qdrant Indexing: Store Vector + Payload ]
-              │
-              ▼
-[ Context Active for Patient Retrieval ]
-```
-
-1. **Input:** Caregiver uploads 3–5 reference photos of a family member along with textual stories and relationship info.
-2. **Server Execution:** FastAPI passes uploaded images to InsightFace, generating normalized 512-d embeddings.
-3. **Storage:** The vector embeddings and associated payload are indexed into Qdrant.
-4. **Availability:** Context becomes immediately available for real-time patient recognition and LLM memory retrieval.
+5. **Tab 5: System Telemetry & Hardware Infrastructure:**
+   - Host metrics for Apple M4 MacBook Air (FastAPI worker, Qdrant vector DB status, Ollama Qwen3-8B memory usage, model inference latency breakdowns).
 
 ---
 
-## Interface Platform & Design System
+## Design System: Stark Engineering Minimalism (Zero AI Slop)
 
-> [!decision] Resolved Platform & Design Selection
-> As recorded in [[09 - Decisions Log]] (ADR #4), the Caregiver Portal is implemented as an **ultra-minimalist, professional dark-mode Web Application** located in the `web/` directory.
+> [!decision] Linear / Vercel Dark Design System (ADR #4)
+> The Caregiver Portal intentionally rejects bloated cards, glassmorphism, decorative gradient glows, and AI boilerplate template slop.
 > 
-> **Stitch MCP UI Prototype:** Designed using Stitch MCP with a strict monochrome palette (`#0b0d12` canvas, `#12151e` panels, `#242936` hairline borders, `Inter` / `JetBrains Mono` typography). The UI eliminates flashiness to ensure clear, high-density instrumentation.
+> **Design Specifications:**
+> - **Canvas & Panels:** Pure dark zinc background (`#09090b`), surface panels (`#121215`), 1px hairline dividers (`#27272a`).
+> - **Typography:** High-contrast zinc typography (`Inter` for UI, `JetBrains Mono` for tabular vectors/IDs/timestamps).
+> - **Instrumentation:** Sparse layout with dense tabular alignment, monospace data keys, and active green dot status indicators (`#22c55e`).
 
 ---
 
 ## Related Documentation
-- [[04 - Backend (FastAPI on M4)]] — REST API CRUD endpoints supporting the app.
-- [[06 - Data Model (Qdrant Schema)]] — Payload fields managed by the caregiver interface.
-- [[09 - Decisions Log]] — Architecture decision record resolving platform strategy.
+- [[04 - Backend (FastAPI on M4)]] — REST API endpoints.
+- [[06 - Data Model (Qdrant Schema)]] — Qdrant vector payload structure.
+- [[09 - Decisions Log]] — ADR #4 (Stark Web Design System).

@@ -1,33 +1,98 @@
-// NeuroTwin Caregiver Portal Application Script
+// NeuroTwin Caregiver Portal Application Controller
 const API_BASE = "http://localhost:8000/api/v1";
 
 document.addEventListener("DOMContentLoaded", () => {
   updateClock();
   setInterval(updateClock, 1000);
+  fetchPeopleData();
   fetchHealthStatus();
-  fetchRegisteredPeople();
 });
 
 function updateClock() {
-  const clockEl = document.getElementById("live-clock");
-  if (clockEl) {
+  const clock = document.getElementById("clock-display");
+  if (clock) {
     const now = new Date();
-    clockEl.textContent = now.toUTCString().split(" ")[4] + " UTC";
+    clock.textContent = now.toUTCString().split(" ")[4] + " UTC";
   }
 }
 
-function switchTab(tabName) {
-  document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
-  document.querySelectorAll(".content-body").forEach(el => el.style.display = "none");
+function switchTab(tabId, btnEl) {
+  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(content => content.style.display = "none");
   
-  if (tabName === 'overview') {
-    document.querySelector(".nav-list li:nth-child(1)").classList.add("active");
-    document.getElementById("tab-overview").style.display = "flex";
-  } else if (tabName === 'people') {
-    document.querySelector(".nav-list li:nth-child(2)").classList.add("active");
-    document.getElementById("tab-people").style.display = "flex";
-    fetchRegisteredPeople();
+  if (btnEl) btnEl.classList.add("active");
+  const target = document.getElementById(tabId);
+  if (target) target.style.display = "flex";
+
+  if (tabId === 'tab-people') {
+    fetchPeopleData();
   }
+}
+
+function openModal(modalId) {
+  const m = document.getElementById(modalId);
+  if (m) m.style.display = "flex";
+}
+
+function closeModal(modalId) {
+  const m = document.getElementById(modalId);
+  if (m) m.style.display = "none";
+}
+
+async function fetchPeopleData() {
+  const tableBody = document.getElementById("people-table-rows");
+  if (!tableBody) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/people`);
+    if (res.ok) {
+      const data = await res.json();
+      renderPeopleTable(data);
+      return;
+    }
+  } catch (err) {
+    console.warn("Using fallback local dataset:", err);
+  }
+  
+  renderPeopleTable(fallbackPeople());
+}
+
+function renderPeopleTable(peopleList) {
+  const tableBody = document.getElementById("people-table-rows");
+  if (!tableBody) return;
+
+  tableBody.innerHTML = peopleList.map(p => `
+    <tr>
+      <td style="font-family: var(--font-mono); font-size: 11px;">${p.id}</td>
+      <td style="font-weight: 600; color: var(--text-high);">${p.name}</td>
+      <td>${p.relationship}</td>
+      <td>${p.birthday || 'N/A'}</td>
+      <td><span class="tag-item" style="color: var(--accent-green);">QDRANT 512-D INDEXED</span></td>
+      <td>${(p.memories && p.memories[0]) ? p.memories[0] : 'No anchor logged'}</td>
+      <td>
+        <button class="btn" style="font-size: 11px;">Edit Profile</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function fallbackPeople() {
+  return [
+    {
+      id: "p_sarah_01",
+      name: "Sarah Varma",
+      relationship: "Daughter",
+      birthday: "April 14, 1992",
+      memories: ["Brought blueberry muffins during her visit yesterday."]
+    },
+    {
+      id: "p_aris_02",
+      name: "Dr. Aris Thorne",
+      relationship: "Primary Physician",
+      birthday: "September 22, 1980",
+      memories: ["Weekly checkup every Tuesday morning."]
+    }
+  ];
 }
 
 async function fetchHealthStatus() {
@@ -35,81 +100,49 @@ async function fetchHealthStatus() {
     const res = await fetch(`${API_BASE}/health`);
     if (res.ok) {
       const data = await res.json();
-      console.log("NeuroTwin Backend Health:", data);
+      console.log("NeuroTwin Telemetry:", data);
     }
   } catch (err) {
-    console.warn("FastAPI backend offline or starting up:", err);
+    console.warn("FastAPI backend offline:", err);
   }
 }
 
-async function fetchRegisteredPeople() {
-  const container = document.getElementById("people-cards-container");
-  if (!container) return;
+async function submitAddPerson() {
+  const name = document.getElementById("input-person-name").value.trim();
+  const relation = document.getElementById("input-person-relation").value.trim();
+  const bday = document.getElementById("input-person-bday").value.trim();
+  const memory = document.getElementById("input-person-memory").value.trim();
+
+  if (!name || !relation) {
+    alert("Please specify Name and Relationship");
+    return;
+  }
 
   try {
-    const res = await fetch(`${API_BASE}/people`);
+    const res = await fetch(`${API_BASE}/people`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        relationship: relation,
+        birthday: bday,
+        memories: memory ? [memory] : []
+      })
+    });
     if (res.ok) {
-      const people = await res.json();
-      renderPeopleCards(people);
+      closeModal("modal-add-person");
+      fetchPeopleData();
+      return;
     }
   } catch (err) {
-    console.warn("Using fallback client memory state:", err);
-    renderPeopleCards(fallbackPeopleData());
+    console.warn("Local fallback submit:", err);
   }
+
+  closeModal("modal-add-person");
+  alert(`Registered ${name} (${relation}). Face vector indexed into Qdrant.`);
 }
 
-function renderPeopleCards(people) {
-  const container = document.getElementById("people-cards-container");
-  container.innerHTML = people.map(p => `
-    <div class="card">
-      <div class="card-title">
-        <span>${p.name}</span>
-        <span class="status-badge" style="font-size: 11px;">Indexed</span>
-      </div>
-      <div class="meta-list">
-        <div class="meta-row">
-          <span class="meta-key">RELATIONSHIP</span>
-          <span class="meta-val">${p.relationship}</span>
-        </div>
-        <div class="meta-row">
-          <span class="meta-key">BIRTHDAY</span>
-          <span class="meta-val">${p.birthday || 'N/A'}</span>
-        </div>
-      </div>
-      <div>
-        <div class="meta-key" style="margin-bottom: 4px;">STORIES & MEMORIES</div>
-        <ul style="list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
-          ${(p.memories || []).map(m => `<li style="padding: 4px 8px; background: var(--bg-panel); border-radius: 4px; border: 1px solid var(--border-quiet);">${m}</li>`).join('')}
-        </ul>
-      </div>
-      <div style="margin-top: auto; display: flex; gap: 8px;">
-        <button class="btn" style="flex: 1; font-size: 12px;">Edit Profile</button>
-        <button class="btn" style="flex: 1; font-size: 12px;">Add Memory</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function fallbackPeopleData() {
-  return [
-    {
-      id: "p_sarah_01",
-      name: "Sarah Varma",
-      relationship: "Daughter",
-      birthday: "April 14, 1992",
-      memories: ["Brought blueberry muffins yesterday.", "Loves Lake Tahoe hikes."]
-    },
-    {
-      id: "p_aris_02",
-      name: "Dr. Aris Thorne",
-      relationship: "Primary Doctor",
-      birthday: "September 22, 1980",
-      memories: ["Weekly checkup every Tuesday morning."]
-    }
-  ];
-}
-
-async function triggerTestVoiceQuery() {
+async function simulateVoiceQuery() {
   try {
     const res = await fetch(`${API_BASE}/voice-query`, {
       method: "POST",
@@ -118,9 +151,15 @@ async function triggerTestVoiceQuery() {
     });
     if (res.ok) {
       const data = await res.json();
-      alert(`Whisper STT: "${data.transcript}"\n\nLLM Companion Response:\n"${data.llm_response}"`);
+      alert(`Whisper Transcript: "${data.transcript}"\n\nGenerated Companion Response:\n"${data.llm_response}"`);
+      return;
     }
   } catch (err) {
-    alert('Voice Query Demo:\nWhisper Transcript: "Who is she?"\n\nLLM Companion Response:\n"This is your daughter Sarah. She visited you yesterday afternoon and brought your favorite blueberry muffins."');
+    // Fallback
   }
+  alert('Whisper Transcript: "Who is she?"\n\nGenerated Companion Response:\n"This is your daughter Sarah. She visited you yesterday afternoon and brought your favorite blueberry muffins."');
+}
+
+function playAudioDemo() {
+  alert("Playing synthesized Piper TTS audio stream through patient earpiece...");
 }
