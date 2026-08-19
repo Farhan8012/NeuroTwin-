@@ -1,0 +1,209 @@
+{
+  "main": {
+    "id": "d64514ad0d9e1a19",
+    "type": "split",
+    "children": [
+      {
+        "id": "9adec11ab11e22f8",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "0842851ef264545e",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "NeuroTwin/08 - Tech Stack.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "08 - Tech Stack"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "9bea15a455020b1c",
+    "type": "split",
+    "children": [
+      {
+        "id": "2ada1714a10531ca",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "342a0b537ff06e5b",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "8b1d1914f15d9030",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "284a3b9fff0186c8",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "cfe33daa5877f147",
+    "type": "split",
+    "children": [
+      {
+        "id": "09bb8fb3b49948e3",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "cebe2c00dd000a49",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "NeuroTwin/08 - Tech Stack.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "953da404d8a84155",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "NeuroTwin/08 - Tech Stack.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "fbf2e25f9f8b88bb",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "5691e616def33876",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "3b95401843aea3d7",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "NeuroTwin/08 - Tech Stack.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "0842851ef264545e",
+  "lastOpenFiles": [
+    "web/app.js",
+    "web/index.html",
+    "web/styles.css",
+    "web",
+    "backend/app/routers/__pycache__/voice.cpython-314.pyc",
+    "backend/app/routers/__pycache__/people.cpython-314.pyc",
+    "backend/app/routers/__pycache__/health.cpython-314.pyc",
+    "backend/app/routers/__pycache__/frame.cpython-314.pyc",
+    "backend/app/routers/__pycache__",
+    "backend/app/__pycache__/schemas.cpython-314.pyc",
+    "backend/app/__pycache__/main.cpython-314.pyc",
+    "NeuroTwin/index.md",
+    "index.md",
+    "NeuroTwin/00 - MOC.md",
+    "NeuroTwin/06 - Data Model (Qdrant Schema).md"
+  ]
+}

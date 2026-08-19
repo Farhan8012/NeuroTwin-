@@ -1,7 +1,7 @@
 ---
 project: NeuroTwin
 tags: [neurotwin, neurotwin/roadmap]
-status: draft
+status: in-progress
 created: 2026-08-19
 updated: 2026-08-19
 ---
@@ -14,11 +14,11 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 
 ---
 
-### Phase 1: Backend Skeleton Setup
-- [ ] Initialize FastAPI project repository with async structure.
-- [ ] Spin up local Qdrant vector database container via Docker on M4.
-- [ ] Implement base database connections and configuration management.
-- [ ] Build and verify basic `/health` status endpoint.
+### Phase 1: Backend Skeleton Setup (Completed)
+- [x] Initialize FastAPI project repository with async structure (`backend/`).
+- [x] Configure Pydantic schemas, settings management, and CORS middleware.
+- [x] Implement APIRouters for `/health`, `/frame`, `/voice-query`, and `/people`.
+- [x] Build and verify basic `/health` status endpoint.
 
 ---
 
@@ -56,11 +56,11 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 
 ---
 
-### Phase 6: Caregiver Application & CRUD Features
-- [ ] Develop Caregiver management UI (Web dashboard or Android screen).
-- [ ] Implement full CRUD workflows for family memories, life stories, favorite songs, and hobbies.
-- [ ] Add medication schedule and emergency contact management endpoints.
-- [ ] Build interaction history log viewer.
+### Phase 6: Caregiver Application & UI (In Progress)
+- [x] Design ultra-minimalist, professional dark-mode Caregiver UI via Stitch MCP.
+- [x] Implement frontend single-page application in `web/` with live monitor & profile views.
+- [x] Connect frontend web interface to FastAPI backend endpoints (`/health`, `/people`, `/voice-query`).
+- [ ] Add full CRUD form modal for uploading photos and registering new face embeddings.
 
 ---
 
@@ -74,5 +74,6 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 
 ## Related Documentation
 - [[02 - Architecture Overview]] — Technical target architecture.
+- [[07 - Caregiver App]] — Caregiver portal specification.
 - [[08 - Tech Stack]] — Software and hardware components.
 - [[12 - Open Questions]] — Unresolved questions impacting roadmap items.

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuroTwin — Caregiver & Memory Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand-container">
+      <div class="brand-icon">NT</div>
+      <div class="brand-title">NeuroTwin</div>
+    </div>
+    
+    <ul class="nav-list">
+      <li class="nav-item active" onclick="switchTab('overview')">
+        <span>Overview & Live Monitor</span>
+      </li>
+      <li class="nav-item" onclick="switchTab('people')">
+        <span>Registered People & Memories</span>
+      </li>
+      <li class="nav-item" onclick="switchTab('medicines')">
+        <span>Medications & Schedule</span>
+      </li>
+      <li class="nav-item" onclick="switchTab('logs')">
+        <span>System Telemetry & Logs</span>
+      </li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <div>Host: Apple M4 MacBook</div>
+      <div style="margin-top: 4px;">Engine: FastAPI + Qdrant</div>
+    </div>
+  </aside>
+
+  <!-- Main Wrapper -->
+  <div class="main-wrapper">
+    <!-- Header Bar -->
+    <header class="header-bar">
+      <div class="header-title" style="font-weight: 500;">Caregiver Portal • Patient Companion Mode</div>
+      <div class="header-status">
+        <div class="status-badge">
+          <span class="status-dot"></span>
+          <span>Mobile Client: Connected (1.5 fps)</span>
+        </div>
+        <div class="server-metric" id="live-clock">17:53:00 UTC</div>
+      </div>
+    </header>
+
+    <!-- Content Body: Tab 1 (Overview) -->
+    <main class="content-body" id="tab-overview">
+      <div class="section-header">
+        <div>
+          <h1 class="page-title">Ambient Vision & Memory Context</h1>
+          <p class="page-subtitle">Real-time passive observation, facial vector matching, and active memory payloads.</p>
+        </div>
+        <button class="btn btn-primary" onclick="triggerTestVoiceQuery()">Simulate Voice Query</button>
+      </div>
+
+      <!-- Two Column Monitor Grid -->
+      <div class="grid-two-col">
+        <!-- Live Camera Stream Monitor -->
+        <div class="card">
+          <div class="card-title">
+            <span>CameraX Live Stream (On-Device ML Kit Gated)</span>
+            <span style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);">STREAM_ID: #CAM-0821</span>
+          </div>
+
+          <div class="camera-box">
+            <div class="camera-grid-overlay"></div>
+            <div class="face-box-overlay">
+              <div class="face-label-tag">Sarah Varma • 94%</div>
+            </div>
+            <div style="position: absolute; bottom: 12px; left: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);">
+              Gating Rule: ML Kit Face Detected • Uploaded to FastAPI
+            </div>
+          </div>
+
+          <div class="meta-list">
+            <div class="meta-row">
+              <span class="meta-key">FACIAL EMBEDDING</span>
+              <span class="meta-val" style="font-family: var(--font-mono); font-size: 11px;">InsightFace 512-d (Cosine Similarity: 0.9421)</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">VECTOR INDEX</span>
+              <span class="meta-val" style="font-family: var(--font-mono); font-size: 11px;">Qdrant :: collection: people :: point_id: p_sarah_01</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">RETRIEVAL LATENCY</span>
+              <span class="meta-val" style="font-family: var(--font-mono); font-size: 11px;">42.5 ms (FastAPI on M4)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Context Payload -->
+        <div class="card">
+          <div class="card-title">
+            <span>Active Retrieved Memory Context</span>
+            <span class="status-badge" style="background: rgba(78,142,255,0.1); color: var(--accent-soft);">Matched</span>
+          </div>
+
+          <div class="meta-list">
+            <div class="meta-row">
+              <span class="meta-key">NAME & RELATIONSHIP</span>
+              <span class="meta-val">Sarah Varma (Daughter)</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">LAST VISIT</span>
+              <span class="meta-val">Yesterday at 3:30 PM</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-key">BIRTHDAY</span>
+              <span class="meta-val">April 14, 1992</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="meta-key" style="margin-bottom: 6px;">EPISODIC MEMORIES & ANECDOTES</div>
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px;">
+              <li style="padding: 6px 10px; background: var(--bg-panel); border-radius: 4px; border: 1px solid var(--border-quiet);">
+                "Brought blueberry muffins during her visit yesterday."
+              </li>
+              <li style="padding: 6px 10px; background: var(--bg-panel); border-radius: 4px; border: 1px solid var(--border-quiet);">
+                "Loves taking walks in the botanical garden with you."
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <div class="meta-key" style="margin-bottom: 6px;">FAVORITE SONGS & HOBBIES</div>
+            <div class="tag-cloud">
+              <span class="tag">🎵 You Are My Sunshine</span>
+              <span class="tag">🎵 Here Comes the Sun</span>
+              <span class="tag">🌱 Gardening</span>
+              <span class="tag">🧁 Baking Pastries</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interaction History Log Table -->
+      <div class="card">
+        <div class="card-title">
+          <span>Recent Patient Voice Interactions</span>
+          <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">STT: Whisper • TTS: Piper</span>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Spoken Question</th>
+              <th>Retrieved Context</th>
+              <th>Synthesized LLM Companion Response</th>
+              <th>Audio Playback</th>
+            </tr>
+          </thead>
+          <tbody id="voice-log-body">
+            <tr>
+              <td style="font-family: var(--font-mono); font-size: 11px;">17:48:12</td>
+              <td style="font-weight: 500; color: var(--text-primary);">"Who is she?"</td>
+              <td>Sarah Varma (Daughter)</td>
+              <td>"This is your daughter Sarah. She visited you yesterday afternoon and brought your favorite blueberry muffins."</td>
+              <td><button class="btn" style="padding: 2px 8px; font-size: 11px;">▶ Play Earpiece Audio</button></td>
+            </tr>
+            <tr>
+              <td style="font-family: var(--font-mono); font-size: 11px;">16:30:05</td>
+              <td style="font-weight: 500; color: var(--text-primary);">"Where are my reading glasses?"</td>
+              <td>Object: reading_glasses</td>
+              <td>"Your blue reading glasses were last seen on the living room coffee table next to your book."</td>
+              <td><button class="btn" style="padding: 2px 8px; font-size: 11px;">▶ Play Earpiece Audio</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- Content Body: Tab 2 (Registered People) -->
+    <main class="content-body" id="tab-people" style="display: none;">
+      <div class="section-header">
+        <div>
+          <h1 class="page-title">Registered People & Memory Profiles</h1>
+          <p class="page-subtitle">Manage family members, upload photos for face embeddings, and log life stories.</p>
+        </div>
+        <button class="btn btn-primary" onclick="openAddPersonModal()">+ Add New Person</button>
+      </div>
+
+      <div class="grid-cards" id="people-cards-container">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

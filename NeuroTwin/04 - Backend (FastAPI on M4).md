@@ -1,7 +1,7 @@
 ---
 project: NeuroTwin
 tags: [neurotwin, neurotwin/backend]
-status: draft
+status: in-progress
 created: 2026-08-19
 updated: 2026-08-19
 ---
@@ -16,18 +16,35 @@ The backend is responsible for receiving filtered frames and voice snippets from
 
 ---
 
-## Endpoint API Specification Sketch
+## Directory Architecture (`backend/`)
 
-| Method | Endpoint | Description | Request Payload | Response Payload |
-| :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/frame` | Process incoming camera frame | `multipart/form-data` (JPEG image byte stream) | `{ match: bool, person: { name, relation, context }, confidence: float }` |
-| `POST` | `/voice-query` | Process spoken patient audio query | `multipart/form-data` (WAV/AAC audio file) | `{ transcript: str, llm_response: str, tts_audio_url: str }` |
-| `GET` | `/people` | List all registered people | Query params (page, limit) | Array of registered profiles with vector metadata |
-| `POST` | `/people` | Register new person & generate embeddings | `{ name, relationship, photos[], memories[] }` | `{ id: str, status: "indexed" }` |
-| `GET/POST` | `/memories` | CRUD for stories, life events, songs | JSON body | Updated memory payload |
-| `GET/POST` | `/medicines` | Schedule & medication entries | JSON body | Medication reminders & logs |
-| `GET/POST` | `/emergency-contacts` | Emergency contact management | JSON body | Contact list |
-| `GET` | `/health` | System health check & resource check | None | `{ status: "ok", qdrant: "connected", ollama: "online" }` |
+```
+backend/
+├── requirements.txt
+└── app/
+    ├── __init__.py
+    ├── main.py            # FastAPI App instance & CORS configuration
+    ├── config.py          # Settings management (Pydantic BaseSettings)
+    ├── schemas.py         # Request/Response Pydantic schemas
+    └── routers/
+        ├── health.py      # Health & system telemetry endpoint (/api/v1/health)
+        ├── frame.py       # Vision embedding & Qdrant query (/api/v1/frame)
+        ├── voice.py       # Whisper STT + LLM story + TTS synthesis (/api/v1/voice-query)
+        └── people.py      # Caregiver CRUD for registered people (/api/v1/people)
+```
+
+---
+
+## Endpoint API Specification
+
+| Method | Endpoint | Description | Request Payload | Response Payload | Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/health` | System health check & resource check | None | `{ status: "online", components, system_metrics }` | Implemented |
+| `POST` | `/api/v1/frame` | Process incoming camera frame | `multipart/form-data` | `{ matched: true, person: { ... }, processing_time_ms }` | Implemented |
+| `POST` | `/api/v1/voice-query` | Process spoken patient audio query | `VoiceQueryRequest` | `{ transcript, llm_response, tts_audio_url }` | Implemented |
+| `GET` | `/api/v1/people` | List all registered people | None | Array of registered profiles with vector metadata | Implemented |
+| `POST` | `/api/v1/people` | Register new person & generate embeddings | `PersonCreate` | `{ id: "p_03", name: "...", status: "indexed" }` | Implemented |
+| `GET` | `/api/v1/people/{id}` | Fetch specific person profile | Path param `id` | `PersonResponse` | Implemented |
 
 ---
 
@@ -35,24 +52,22 @@ The backend is responsible for receiving filtered frames and voice snippets from
 
 > [!important] M4 Resource Sharing & Benchmarking
 > The backend host (Apple M4 MacBook Air) is a shared local server. It simultaneously hosts:
-> 1. FastAPI application process.
+> 1. FastAPI application process (`backend/`).
 > 2. Qdrant vector database container.
 > 3. Server-side vision & TTS models (InsightFace, YOLO, Piper/Kokoro, Whisper).
 > 4. **An existing local Ollama instance running Qwen3-8B** for other workloads.
-
-Because Unified Memory and GPU cores are shared across these processes, rigorous latency and memory benchmarking must be conducted under real load before assuming sufficient headroom for hosting all LLM inference locally.
 
 ---
 
 ## Async Architecture & Performance Optimization
 
-- **Uvicorn + FastAPI:** Uses Python `asyncio` non-blocking endpoints for I/O-bound tasks (network requests, database reads).
-- **Background Worker Threads:** Heavy CPU/GPU bound model inferences (InsightFace embedding generation, YOLO object detection) are offloaded to `concurrent.futures.ProcessPoolExecutor` or dedicated GPU task queues to avoid blocking Uvicorn's event loop.
-- **In-Memory Session Caching:** Recently matched visual contexts are held in an in-memory TTL cache (e.g., Redis or in-process LRU cache) so that subsequent voice queries within a short window can instantly access visual state without re-querying Qdrant.
+- **Uvicorn + FastAPI:** Uses Python `asyncio` non-blocking endpoints for I/O-bound tasks.
+- **Background Worker Threads:** Heavy CPU/GPU bound model inferences (InsightFace embedding generation, YOLO object detection) are offloaded to process executors to avoid blocking Uvicorn's event loop.
+- **In-Memory Session Caching:** Recently matched visual contexts are held in an in-memory TTL cache so that subsequent voice queries within a short window can instantly access visual state without re-querying Qdrant.
 
 ---
 
 ## Related Documentation
 - [[05 - AI Pipeline]] — Server-side model details (InsightFace, Qdrant, Whisper, LLM, TTS).
 - [[06 - Data Model (Qdrant Schema)]] — Vector collection definitions and payload structures.
-- [[13 - Dev Environment and Tooling]] — Server environment setup on macOS.
+- [[09 - Decisions Log]] — ADR #5 (Modular Router Architecture).

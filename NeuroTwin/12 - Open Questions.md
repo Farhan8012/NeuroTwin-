@@ -1,7 +1,7 @@
 ---
 project: NeuroTwin
 tags: [neurotwin, neurotwin/open-question]
-status: draft
+status: in-progress
 created: 2026-08-19
 updated: 2026-08-19
 ---
@@ -10,7 +10,15 @@ updated: 2026-08-19
 
 ## Overview
 
-This note serves as the living source of truth for all unresolved design decisions, technical trade-offs, and open architecture questions in NeuroTwin. As decisions are resolved during building, they will be migrated into [[09 - Decisions Log]].
+This note serves as the living source of truth for all unresolved design decisions, technical trade-offs, and open architecture questions in NeuroTwin. As decisions are resolved during building, they are migrated into [[09 - Decisions Log]].
+
+---
+
+## Resolved Questions
+
+> [!note] RESOLVED — Question #2: Caregiver Interface Platform Strategy
+> - **Resolution:** Implemented as an **ultra-minimalist, professional dark-mode Web Application** located in `web/` designed via Stitch MCP.
+> - **ADR:** See [[09 - Decisions Log]] (ADR #4).
 
 ---
 
@@ -20,11 +28,6 @@ This note serves as the living source of truth for all unresolved design decisio
 > - **Context:** Groq-hosted Llama 3 offers ultra-fast response times and free API access, offloading compute from the M4 server, but requires an active internet connection and sends data off-device. Local Ollama + Qwen3-8B running on the M4 keeps all data 100% private on the local LAN, but competes directly for RAM, CPU, and GPU resources with Qdrant, InsightFace, YOLO, Whisper, and TTS.
 > - **Action Item:** Benchmark both approaches under full concurrent pipeline load once the backend skeleton is complete.
 > - **Cross-Reference:** [[05 - AI Pipeline]], [[04 - Backend (FastAPI on M4)]]
-
-> [!question] 2. Caregiver Interface Platform Strategy
-> - **Context:** Options include a standalone React web dashboard (the original plan), a secondary mode/screen within the primary Android patient application, or a separate lightweight companion Android app.
-> - **Action Item:** Revisit once the core patient-facing capture and voice retrieval loop is functional.
-> - **Cross-Reference:** [[07 - Caregiver App]], [[03 - Mobile Client (Android)]]
 
 > [!question] 3. BLE Tags for Physical Object Tracking
 > - **Context:** In addition to visual object detection (YOLO), incorporating physical Bluetooth Low Energy (BLE) beacon tags could provide precise indoor triangulation for misplaced items like keys or wallets.

@@ -1,7 +1,7 @@
 ---
 project: NeuroTwin
 tags: [neurotwin, neurotwin/caregiver]
-status: draft
+status: in-progress
 created: 2026-08-19
 updated: 2026-08-19
 ---
@@ -65,19 +65,16 @@ When a caregiver enters new information via the app, the data flows through the 
 
 ---
 
-## Open Architectural Decision: Interface Platform
+## Interface Platform & Design System
 
-> [!question] Caregiver Platform Strategy
-> The target deployment platform for the Caregiver App remains an open decision:
-> 1. **React Web Dashboard:** Original design plan. Accessible from any modern browser, desktop, or mobile device.
-> 2. **Dedicated Android Screen/Mode:** Built inside the same native Kotlin app as a secondary role-based interface.
-> 3. **Standalone Mobile App:** A separate lightweight companion app distributed via app stores.
+> [!decision] Resolved Platform & Design Selection
+> As recorded in [[09 - Decisions Log]] (ADR #4), the Caregiver Portal is implemented as an **ultra-minimalist, professional dark-mode Web Application** located in the `web/` directory.
 > 
-> **Recommendation:** Defer decision until the core patient-facing capture and retrieval loop is fully operational.
+> **Stitch MCP UI Prototype:** Designed using Stitch MCP with a strict monochrome palette (`#0b0d12` canvas, `#12151e` panels, `#242936` hairline borders, `Inter` / `JetBrains Mono` typography). The UI eliminates flashiness to ensure clear, high-density instrumentation.
 
 ---
 
 ## Related Documentation
 - [[04 - Backend (FastAPI on M4)]] — REST API CRUD endpoints supporting the app.
 - [[06 - Data Model (Qdrant Schema)]] — Payload fields managed by the caregiver interface.
-- [[12 - Open Questions]] — Unresolved decisions list.
+- [[09 - Decisions Log]] — Architecture decision record resolving platform strategy.
