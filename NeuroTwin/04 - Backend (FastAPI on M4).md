@@ -16,7 +16,7 @@ The backend is responsible for receiving filtered frames and voice snippets from
 
 ---
 
-## Directory Architecture (`backend/`)
+## Complete Directory Architecture (`backend/`)
 
 ```
 backend/
@@ -26,11 +26,18 @@ backend/
     ├── main.py            # FastAPI App instance & CORS configuration
     ├── config.py          # Settings management (Pydantic BaseSettings)
     ├── schemas.py         # Request/Response Pydantic schemas
+    ├── services/
+    │   ├── qdrant_service.py # Qdrant client vector DB search & upsert
+    │   ├── face_service.py   # InsightFace/FaceNet 512-d embedding extraction
+    │   └── llm_service.py    # Ollama (Qwen3-8B) / Groq API companion reasoning
     └── routers/
-        ├── health.py      # Health & system telemetry endpoint (/api/v1/health)
-        ├── frame.py       # Vision embedding & Qdrant query (/api/v1/frame)
-        ├── voice.py       # Whisper STT + LLM story + TTS synthesis (/api/v1/voice-query)
-        └── people.py      # Caregiver CRUD for registered people (/api/v1/people)
+        ├── health.py             # Health & system telemetry endpoint (/api/v1/health)
+        ├── frame.py              # Vision embedding & Qdrant query (/api/v1/frame)
+        ├── voice.py              # Whisper STT + LLM story + TTS synthesis (/api/v1/voice-query)
+        ├── people.py             # Caregiver CRUD for registered people (/api/v1/people)
+        ├── memories.py           # Caregiver CRUD for memory anchors (/api/v1/memories)
+        ├── medicines.py          # Caregiver CRUD for medications (/api/v1/medicines)
+        └── emergency.py          # Caregiver CRUD for emergency contacts (/api/v1/emergency-contacts)
 ```
 
 ---
@@ -42,9 +49,10 @@ backend/
 | `GET` | `/api/v1/health` | System health check & resource check | None | `{ status: "online", components, system_metrics }` | Implemented |
 | `POST` | `/api/v1/frame` | Process incoming camera frame | `multipart/form-data` | `{ matched: true, person: { ... }, processing_time_ms }` | Implemented |
 | `POST` | `/api/v1/voice-query` | Process spoken patient audio query | `VoiceQueryRequest` | `{ transcript, llm_response, tts_audio_url }` | Implemented |
-| `GET` | `/api/v1/people` | List all registered people | None | Array of registered profiles with vector metadata | Implemented |
-| `POST` | `/api/v1/people` | Register new person & generate embeddings | `PersonCreate` | `{ id: "p_03", name: "...", status: "indexed" }` | Implemented |
-| `GET` | `/api/v1/people/{id}` | Fetch specific person profile | Path param `id` | `PersonResponse` | Implemented |
+| `GET/POST` | `/api/v1/people` | List/register people & index face vectors | `PersonCreate` | `PersonResponse` | Implemented |
+| `GET/POST` | `/api/v1/memories` | List/create memory anchors & stories | `MemoryCreate` | Array of memory stories | Implemented |
+| `GET/POST` | `/api/v1/medicines` | List/create medication schedule | `MedicineItem` | Medication list | Implemented |
+| `GET/POST` | `/api/v1/emergency-contacts` | List/create emergency contacts | `EmergencyContact` | Emergency contacts list | Implemented |
 
 ---
 
@@ -59,15 +67,7 @@ backend/
 
 ---
 
-## Async Architecture & Performance Optimization
-
-- **Uvicorn + FastAPI:** Uses Python `asyncio` non-blocking endpoints for I/O-bound tasks.
-- **Background Worker Threads:** Heavy CPU/GPU bound model inferences (InsightFace embedding generation, YOLO object detection) are offloaded to process executors to avoid blocking Uvicorn's event loop.
-- **In-Memory Session Caching:** Recently matched visual contexts are held in an in-memory TTL cache so that subsequent voice queries within a short window can instantly access visual state without re-querying Qdrant.
-
----
-
 ## Related Documentation
 - [[05 - AI Pipeline]] — Server-side model details (InsightFace, Qdrant, Whisper, LLM, TTS).
 - [[06 - Data Model (Qdrant Schema)]] — Vector collection definitions and payload structures.
-- [[09 - Decisions Log]] — ADR #5 (Modular Router Architecture).
+- [[09 - Decisions Log]] — ADR #5 (Modular Router & Services Architecture).

@@ -35,13 +35,14 @@ NeuroTwin leverages specialized MCP servers to streamline testing, IDE intellige
 
 ## Development Machine Environment
 
-- **Host Hardware:** Apple MacBook Air (M4 chip, macOS).
-- **Backend Runtime:** Python 3.11+, Uvicorn, FastAPI.
-- **Database Service:** Qdrant container running via Docker.
-- **Local AI Services:** Existing Ollama instance serving `Qwen3-8B`.
+- **Host Hardware:** Apple MacBook Air (M4 chip, 16GB unified memory, macOS).
+- **Backend Runtime:** Python 3.12 via `uv` virtualenv at `backend/.venv`, Uvicorn + FastAPI on port `8000`.
+- **Database Service:** Native Qdrant 1.19 binary at `backend/qdrant/bin/qdrant` (port `6333`) — no Docker daemon required (see ADR #7).
+- **Local AI Services:** Model weights bundled in `backend/models/` — InsightFace `buffalo_l`, faster-whisper `base`, Piper `en_US-lessac-medium`.
+- **LLM:** Existing Ollama instance serving `Qwen3-8B` (default), Groq Llama 3 via `LLM_PROVIDER=groq` + `GROQ_API_KEY`.
 
 > [!note] M4 Resource Sharing Notice
-> Because the M4 MacBook Air hosts both the backend AI models (InsightFace, YOLO, Whisper, Piper/Kokoro, Qdrant) and the existing Ollama LLM workload, developers should monitor Unified Memory usage and thermal performance during full-stack integration testing.
+> Because the M4 MacBook Air hosts both the backend AI models (InsightFace, Whisper, Piper, Qdrant) and the existing Ollama LLM workload, developers should monitor Unified Memory usage and thermal performance during full-stack integration testing. Startup commands are documented in `backend/README.md`.
 
 ---
 

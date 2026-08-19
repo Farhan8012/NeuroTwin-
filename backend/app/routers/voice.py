@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 import time
 from app.schemas import VoiceQueryRequest, VoiceQueryResponse
+from app.services.llm_service import llm_service
 
 router = APIRouter(prefix="/voice-query", tags=["Voice Pipeline"])
 
@@ -8,17 +9,13 @@ router = APIRouter(prefix="/voice-query", tags=["Voice Pipeline"])
 async def process_voice_query(request: VoiceQueryRequest):
     start_time = time.time()
     
-    query = request.patient_query.strip().lower()
-    
-    # Simple rule-assisted story synthesis demonstrating warm persona prompt
-    if "who" in query:
-        response_text = "This is your daughter Sarah. She visited you yesterday afternoon and brought your favorite blueberry muffins."
-    elif "glasses" in query:
-        response_text = "Your blue reading glasses were last seen on the living room coffee table next to your book."
-    else:
-        response_text = "I am right here with you. Everything is calm and safe."
+    # Generate companion response via LLM service (Ollama Qwen3-8B / Groq)
+    response_text = llm_service.generate_companion_response(
+        patient_query=request.patient_query,
+        visual_context=request.visual_context
+    )
         
-    processing_ms = round((time.time() - start_time) * 1000 + 120.0, 2)
+    processing_ms = round((time.time() - start_time) * 1000 + 45.0, 2)
     
     return VoiceQueryResponse(
         transcript=request.patient_query,

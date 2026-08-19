@@ -24,11 +24,11 @@ Voice Path:   Audio ──> Whisper STT ───────> Transcript ──
 
 1. **Embedding Extraction:**
    - Server receives a gated camera frame containing a face.
-   - **InsightFace** (or FaceNet) normalizes alignment and crops the facial ROI, generating a 512-dimensional floating-point feature vector.
+   - **InsightFace `buffalo_l`** (onnxruntime CPU) normalizes alignment and crops the facial ROI, generating a 512-dimensional floating-point feature vector. Model cached in `backend/models/insightface/`.
 2. **Vector Similarity Query:**
    - The vector is queried against Qdrant's `people` collection using **Cosine Similarity**.
 3. **Thresholding & Matching:**
-   - Match criteria: Similarity score $\ge 0.90 \text{ to } 0.96$.
+   - Match criteria: `FACE_MATCH_THRESHOLD` (default `0.50`, tunable via `.env`; reference-quality photos score ~0.9+, low-res gated frames lower but stay well-separated from impostors).
    - **Above Threshold:** Returns person payload (`name`, `relationship`, `birthday`, `memories`, `family_stories`).
    - **Below Threshold:** Categorized as "Unknown Person". Prompts system to optionally offer caregiver notification or warm generic response.
 
@@ -37,24 +37,24 @@ Voice Path:   Audio ──> Whisper STT ───────> Transcript ──
 ## 2. Object Recognition Flow
 
 1. **YOLO Detection:**
-   - For object queries (e.g., *"Where are my glasses?"* or *"Where did I put my keys?"*), frames are passed through **YOLO** (YOLOv8/v9).
+   - For object queries (e.g., *"Where are my glasses?"* or *"Where did I put my keys?"*), frames are passed through **YOLO** (YOLOv8/v9). *Integration pending (Phase 5).*
 2. **Spatial & Temporal Tracking:**
-   - When key items (glasses, keys, wallet, pill bottle) are detected in frames, the backend logs the detected class, bounding box, timestamp, and room/environmental context.
+   - When key items (glasses, keys, wallet, pill bottle) are detected in frames, the backend logs the detected class, bounding box, timestamp, and room/environmental context into the Qdrant `objects` collection.
 3. **Retrieval Strategy:**
-   - When a patient asks about an object's location, the system fetches the most recent logged location record for that object class.
+   - When a patient asks about an object's location, the backend fetches the most recent logged location record for that object class (`app/services/qdrant_service.py::latest_object_location`).
 
 ---
 
 ## 3. Voice Processing & Conversational Flow
 
 1. **Speech-to-Text (Whisper):**
-   - Spoken audio from the mobile microphone is transcribed using **OpenAI Whisper** (running locally on server via `faster-whisper` or metal-accelerated C++ bindings).
+   - Spoken audio from the mobile microphone is transcribed using **faster-whisper `base`** (CPU, int8 quantization) — cached in `backend/models/whisper/`. Audio files are deleted immediately after transcription (ephemeral buffering, see [[10 - Privacy and Ethics]]).
 2. **Context Bundle Assembly:**
-   - The transcript is merged with active visual context and retrieved person memories into a structured LLM prompt.
+   - The transcript is merged with the active visual context (from the in-memory TTL cache) and retrieved person memories into a structured LLM prompt.
 3. **Language Model Reasoning:**
-   - The assembled context is processed by the selected LLM to produce a response.
-4. **Text-to-Speech Synthesis (Piper / Kokoro):**
-   - The response text is synthesized using **Piper** or **Kokoro TTS**, producing warm, natural-sounding audio streams sent back to the patient's Bluetooth earpiece.
+   - The assembled prompt is processed by the selected LLM (`app/services/llm_service.py`): local **Ollama Qwen3-8B** by default, **Groq Llama 3** when `LLM_PROVIDER=groq`. Falls back to warm rule responses when the provider is offline.
+4. **Text-to-Speech Synthesis (Piper):**
+   - The response text is synthesized with **Piper** (`en_US-lessac-medium` voice) into WAV streams served from `/static/audio/` for the patient's Bluetooth earpiece.
 
 ---
 

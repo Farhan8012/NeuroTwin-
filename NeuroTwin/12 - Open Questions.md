@@ -26,7 +26,8 @@ This note serves as the living source of truth for all unresolved design decisio
 
 > [!question] 1. LLM Hosting Strategy: Groq Cloud API vs. Local Ollama Qwen3-8B
 > - **Context:** Groq-hosted Llama 3 offers ultra-fast response times and free API access, offloading compute from the M4 server, but requires an active internet connection and sends data off-device. Local Ollama + Qwen3-8B running on the M4 keeps all data 100% private on the local LAN, but competes directly for RAM, CPU, and GPU resources with Qdrant, InsightFace, YOLO, Whisper, and TTS.
-> - **Action Item:** Benchmark both approaches under full concurrent pipeline load once the backend skeleton is complete.
+> - **Benchmark (2026-08-19):** First-pass measurement on the M4 (16GB Air, llama-server on CPU — mmap disabled): Qwen3-8B generation ≈ 19–27s per response. The warm-companion persona + TTS loop is usable for demo but noticeably laggy for realtime earpiece conversation.
+> - **Action Item:** Benchmark Groq Llama 3 (`LLM_PROVIDER=groq`) for comparison. If Groq latency is <1s, ship Groq as the default for interactive voice and keep Ollama as the offline/privacy fallback.
 > - **Cross-Reference:** [[05 - AI Pipeline]], [[04 - Backend (FastAPI on M4)]]
 
 > [!question] 3. BLE Tags for Physical Object Tracking

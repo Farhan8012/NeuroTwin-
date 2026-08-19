@@ -16,29 +16,21 @@ Without the caregiver's input, the AI lacks the context required to transform fa
 
 ---
 
-## 5 Core Application Domains (Implemented in `web/`)
+## Implemented in `web/`
 
-1. **Tab 1: Ambient Vision & Speech Monitor:**
-   - Real-time CameraX video frame stream canvas.
-   - On-device ML Kit gating status (`GATED: ML_KIT_PASS`).
-   - InsightFace 512-d embedding & Cosine Distance score (`0.9421`).
-   - Active retained memory payload (Name, Relationship, Last Visit, Anecdotes, Favorite Songs).
-   - Patient Voice Query Log table with Whisper STT transcript, LLM story response, and Piper TTS audio trigger.
+The frontend ships as an **accessible dual-mode SPA**: a large-type **Patient Mode** (recognition card, ask-question voice loop with audio playback, memory reminders) and a **Caregiver Mode** (people registry with photo upload → Qdrant vector indexing, delete/purge, live system telemetry, and voice-query log). All panels call the live FastAPI backend:
 
-2. **Tab 2: People & Biometrics Index:**
-   - Table of registered individuals with Qdrant vector status (`512-D QDRANT INDEXED`).
-   - Modal form (`+ Register New Person`) to upload photos and index new vectors into Qdrant.
+1. **Patient Mode (default):**
+   - Warm recognition hero card with active person context.
+   - Big tap-to-ask voice loop (`POST /voice-query`) with generated Piper TTS audio playback.
+   - Reassuring memory story cards.
 
-3. **Tab 3: Memory Anchors & Story Repository:**
-   - Categorized stories (Life Events, Anecdotes, Favorite Songs, Favorite Places, Hobbies).
-   - Form modal (`+ Log New Memory Anchor`).
+2. **Caregiver Mode:**
+   - **People & Biometrics:** live table from `GET /people` with Qdrant vector status badges; `+ Add New Person` modal uploads a photo to `POST /people/with-photo` and indexes a 512-d InsightFace embedding; delete purges profile + vectors (right to be forgotten).
+   - **System Telemetry:** live M4 metrics from `GET /health` (Qdrant, Ollama, Whisper, Piper, CPU/memory, indexed vector counts).
+   - **Voice Query Log:** running history of patient questions and companion responses.
 
-4. **Tab 4: Medical & Emergency Care Directory:**
-   - Active medication schedule table (Medication Name, Dosage, Schedule Time, Instructions).
-   - Emergency contact directory with primary contact badges.
-
-5. **Tab 5: System Telemetry & Hardware Infrastructure:**
-   - Host metrics for Apple M4 MacBook Air (FastAPI worker, Qdrant vector DB status, Ollama Qwen3-8B memory usage, model inference latency breakdowns).
+The original 5-tab (Ambient Monitor / People / Memories / Medical / Telemetry) caregiver layout remains the target for the remaining CRUD panels (Memory Anchors, Medications, Emergency Contacts).
 
 ---
 

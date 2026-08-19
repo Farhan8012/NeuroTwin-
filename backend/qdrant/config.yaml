@@ -1,0 +1,7 @@
+service:
+  host: 127.0.0.1
+  http_port: 6333
+storage:
+  storage_path: /Users/rishvarma/Documents/Neuro_Twin/backend/qdrant/storage
+  snapshots_path: /Users/rishvarma/Documents/Neuro_Twin/backend/qdrant/snapshots
+telemetry_disabled: true
