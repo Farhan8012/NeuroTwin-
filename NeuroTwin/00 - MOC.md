@@ -46,7 +46,7 @@ updated: 2026-08-19
 | [[00 - MOC]] | Index | `in-progress` |
 | [[01 - Product Idea]] | Product | `draft` |
 | [[02 - Architecture Overview]] | Architecture | `draft` |
-| [[03 - Mobile Client (Android)]] | Mobile | `draft` |
+| [[03 - Mobile Client (Android)]] | Mobile | `in-progress` |
 | [[04 - Backend (FastAPI on M4)]] | Backend | `in-progress` |
 | [[05 - AI Pipeline]] | AI / ML | `draft` |
 | [[06 - Data Model (Qdrant Schema)]] | Data Model | `draft` |

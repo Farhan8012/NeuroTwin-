@@ -28,7 +28,7 @@ NeuroTwin is an AI-powered cognitive companion for patients with memory impairme
 
 ### 2. Architecture & Technical Design
 * **[[02 - Architecture Overview]]** — End-to-end data flow narrative, sequence diagram, and client-server processing split.
-* **[[03 - Mobile Client (Android)]]** — Native Kotlin + Jetpack Compose rationale, CameraX frame gating, ML Kit filters, permissions, and battery optimization.
+* **[[03 - Mobile Client (Android)]]** — Native Kotlin + Jetpack Compose rationale, CameraX frame gating, ML Kit filters, permissions, and battery optimization (`mobile/`).
 * **[[04 - Backend (FastAPI on M4)]]** — Server orchestrator role, REST API endpoint sketch, directory architecture (`backend/`), and M4 hardware resource allocation.
 * **[[05 - AI Pipeline]]** — Face recognition (InsightFace/FaceNet), object tracking (YOLO), speech-to-text (Whisper), LLM persona engineering, and TTS synthesis.
 * **[[06 - Data Model (Qdrant Schema)]]** — Qdrant vector database schemas for `people` (512-d embeddings + payload) and `objects` location logs.
@@ -53,7 +53,7 @@ NeuroTwin is an AI-powered cognitive companion for patients with memory impairme
 | 00 | [[00 - MOC]] | Index | `in-progress` |
 | 01 | [[01 - Product Idea]] | Product | `draft` |
 | 02 | [[02 - Architecture Overview]] | Architecture | `draft` |
-| 03 | [[03 - Mobile Client (Android)]] | Mobile | `draft` |
+| 03 | [[03 - Mobile Client (Android)]] | Mobile | `in-progress` |
 | 04 | [[04 - Backend (FastAPI on M4)]] | Backend | `in-progress` |
 | 05 | [[05 - AI Pipeline]] | AI Pipeline | `draft` |
 | 06 | [[06 - Data Model (Qdrant Schema)]] | Data Model | `draft` |

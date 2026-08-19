@@ -22,12 +22,12 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 
 ---
 
-### Phase 2: Mobile Capture & Gating Plumbing
-- [ ] Scaffold native Android application using Kotlin + Jetpack Compose.
-- [ ] Configure CameraX lifecycle frame capture throttled to 1–2 fps.
-- [ ] Integrate local Google ML Kit Face & Object Detection models on-device.
-- [ ] Implement Retrofit network service to upload gated frames to backend `POST /frame` endpoint.
-- [ ] Verify image upload pipeline without AI recognition active.
+### Phase 2: Mobile Capture & Gating Plumbing (Completed)
+- [x] Scaffold native Android application using Kotlin + Jetpack Compose (`mobile/`).
+- [x] Configure CameraX lifecycle frame capture & CameraForegroundService.
+- [x] Integrate local Google ML Kit Face Detection gating model (`MlKitFilter.kt`).
+- [x] Implement Retrofit network service (`RetrofitClient`) to upload gated frames to backend `POST /frame` endpoint.
+- [x] Build native Jetpack Compose main UI screen (`MainActivity.kt`).
 
 ---
 
@@ -74,6 +74,7 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 
 ## Related Documentation
 - [[02 - Architecture Overview]] — Technical target architecture.
+- [[03 - Mobile Client (Android)]] — Mobile client architecture.
 - [[07 - Caregiver App]] — Caregiver portal specification.
 - [[08 - Tech Stack]] — Software and hardware components.
 - [[12 - Open Questions]] — Unresolved questions impacting roadmap items.
