@@ -18,19 +18,19 @@ Without the caregiver's input, the AI lacks the context required to transform fa
 
 ## Implemented in `web/`
 
-The frontend ships as an **accessible dual-mode SPA**: a large-type **Patient Mode** (recognition card, ask-question voice loop with audio playback, memory reminders) and a **Caregiver Mode** (people registry with photo upload → Qdrant vector indexing, delete/purge, live system telemetry, and voice-query log). All panels call the live FastAPI backend:
+The frontend ships as an **accessible dual-mode SPA**: a large-type **Patient Mode** (recognition card, ask-question voice loop with audio playback, memory reminders) and a **Caregiver Mode** (5-tab layout with People, Memories, Medicines, Emergency, and Telemetry panels). All panels call the live FastAPI backend:
 
 1. **Patient Mode (default):**
    - Warm recognition hero card with active person context.
    - Big tap-to-ask voice loop (`POST /voice-query`) with generated Piper TTS audio playback.
    - Reassuring memory story cards.
 
-2. **Caregiver Mode:**
-   - **People & Biometrics:** live table from `GET /people` with Qdrant vector status badges; `+ Add New Person` modal uploads a photo to `POST /people/with-photo` and indexes a 512-d InsightFace embedding; delete purges profile + vectors (right to be forgotten).
-   - **System Telemetry:** live M4 metrics from `GET /health` (Qdrant, Ollama, Whisper, Piper, CPU/memory, indexed vector counts).
-   - **Voice Query Log:** running history of patient questions and companion responses.
-
-The original 5-tab (Ambient Monitor / People / Memories / Medical / Telemetry) caregiver layout remains the target for the remaining CRUD panels (Memory Anchors, Medications, Emergency Contacts).
+2. **Caregiver Mode (5 tabs):**
+   - **👥 People:** live table from `GET /people` with Qdrant vector status badges; `+ Add New Person` modal uploads a photo to `POST /people/with-photo` and indexes a 512-d InsightFace embedding; delete purges profile + vectors (right to be forgotten).
+   - **🧠 Memories:** full CRUD for memory anchors (`GET/POST/DELETE /memories`); persistent JSON-backed storage via `json_store.py`.
+   - **💊 Medicines:** full CRUD for medication schedule (`GET/POST/DELETE /medicines`); seeded with Donepezil and Memantine defaults.
+   - **🚨 Emergency:** full CRUD for emergency contacts (`GET/POST/DELETE /emergency-contacts`); seeded with Sarah Varma and Dr. Thorne defaults.
+   - **📊 Telemetry:** live M4 metrics from `GET /health` (Qdrant, Ollama, Whisper, Piper, CPU/memory, indexed vector counts) + Patient Voice Query Log.
 
 ---
 

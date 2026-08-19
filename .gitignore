@@ -2,3 +2,19 @@
 .idea/
 __pycache__/
 *.pyc
+*.log
+
+# Backend runtime artifacts
+backend/.venv/
+backend/models/
+backend/qdrant/storage/
+backend/qdrant/snapshots/
+backend/qdrant/*.log
+backend/server.log
+backend/static/
+backend/uploads/
+backend/data/
+.qdrant-initialized
+
+# Test fixtures
+/tmp/

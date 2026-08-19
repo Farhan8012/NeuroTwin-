@@ -21,23 +21,42 @@ The backend is responsible for receiving filtered frames and voice snippets from
 ```
 backend/
 ├── requirements.txt
+├── .env.example
+├── data/                       # JSON-backed persistent storage
+│   ├── people.json
+│   ├── memories.json
+│   ├── medicines.json
+│   └── emergency_contacts.json
+├── static/audio/               # Piper TTS WAV output
+├── static/photos/              # Uploaded reference photos
+├── models/                     # Bundled AI model weights (auto-downloaded)
+│   ├── insightface/models/buffalo_l/
+│   ├── whisper/models/Systran--faster-whisper-base/
+│   └── piper/en_US-lessac-medium.onnx
+├── qdrant/                     # Native Qdrant binary + storage
 └── app/
     ├── __init__.py
-    ├── main.py            # FastAPI App instance & CORS configuration
-    ├── config.py          # Settings management (Pydantic BaseSettings)
-    ├── schemas.py         # Request/Response Pydantic schemas
+    ├── main.py                 # FastAPI App instance, CORS, router mounting
+    ├── config.py               # Pydantic BaseSettings (env-backed)
+    ├── schemas.py              # Request/Response Pydantic models
     ├── services/
-    │   ├── qdrant_service.py # Qdrant client vector DB search & upsert
-    │   ├── face_service.py   # InsightFace/FaceNet 512-d embedding extraction
-    │   └── llm_service.py    # Ollama (Qwen3-8B) / Groq API companion reasoning
+    │   ├── qdrant_service.py   # Qdrant vector DB (UUID conversion, people+objects)
+    │   ├── face_service.py     # InsightFace buffalo_l 512-d embedding extraction
+    │   ├── stt_service.py      # faster-whisper base (CPU int8) transcription
+    │   ├── llm_service.py      # Ollama Qwen3-8B / Groq Llama 3 reasoning
+    │   ├── tts_service.py      # Piper en_US-lessac-medium WAV synthesis
+    │   ├── people_store.py     # JSON-backed person profile registry
+    │   ├── context_cache.py    # In-memory TTL cache for visual context
+    │   └── json_store.py       # Generic JSON CRUD store (memories, meds, contacts)
     └── routers/
-        ├── health.py             # Health & system telemetry endpoint (/api/v1/health)
-        ├── frame.py              # Vision embedding & Qdrant query (/api/v1/frame)
-        ├── voice.py              # Whisper STT + LLM story + TTS synthesis (/api/v1/voice-query)
-        ├── people.py             # Caregiver CRUD for registered people (/api/v1/people)
-        ├── memories.py           # Caregiver CRUD for memory anchors (/api/v1/memories)
-        ├── medicines.py          # Caregiver CRUD for medications (/api/v1/medicines)
-        └── emergency.py          # Caregiver CRUD for emergency contacts (/api/v1/emergency-contacts)
+        ├── health.py           # GET /api/v1/health (real telemetry)
+        ├── frame.py            # POST /api/v1/frame (face match + context cache)
+        ├── voice.py            # POST /api/v1/voice-query (JSON) + /audio (multipart)
+        ├── people.py           # /api/v1/people CRUD + photo→vector indexing
+        ├── memories.py         # /api/v1/memories CRUD (persistent JSON)
+        ├── medicines.py        # /api/v1/medicines CRUD (persistent JSON)
+        ├── emergency.py        # /api/v1/emergency-contacts CRUD (persistent JSON)
+        └── objects.py          # /api/v1/objects list + location query
 ```
 
 ---
@@ -46,13 +65,21 @@ backend/
 
 | Method | Endpoint | Description | Request Payload | Response Payload | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/health` | System health check & resource check | None | `{ status: "online", components, system_metrics }` | Implemented |
-| `POST` | `/api/v1/frame` | Process incoming camera frame | `multipart/form-data` | `{ matched: true, person: { ... }, processing_time_ms }` | Implemented |
-| `POST` | `/api/v1/voice-query` | Process spoken patient audio query | `VoiceQueryRequest` | `{ transcript, llm_response, tts_audio_url }` | Implemented |
-| `GET/POST` | `/api/v1/people` | List/register people & index face vectors | `PersonCreate` | `PersonResponse` | Implemented |
-| `GET/POST` | `/api/v1/memories` | List/create memory anchors & stories | `MemoryCreate` | Array of memory stories | Implemented |
-| `GET/POST` | `/api/v1/medicines` | List/create medication schedule | `MedicineItem` | Medication list | Implemented |
-| `GET/POST` | `/api/v1/emergency-contacts` | List/create emergency contacts | `EmergencyContact` | Emergency contacts list | Implemented |
+| `GET` | `/api/v1/health` | System health & component telemetry | None | `{ status, components, system_metrics }` | ✅ Tested |
+| `POST` | `/api/v1/frame` | Process camera frame → face match → context cache | `multipart/form-data` | `FrameProcessResponse` | ✅ Tested |
+| `POST` | `/api/v1/voice-query` | JSON text → LLM → TTS | `VoiceQueryRequest` | `VoiceQueryResponse` | ✅ Tested |
+| `POST` | `/api/v1/voice-query/audio` | Multipart audio → Whisper STT → LLM → TTS | `audio` file | `VoiceQueryResponse` | ✅ Tested |
+| `GET/POST` | `/api/v1/people` | List/register people profiles | `PersonCreate` | `PersonResponse[]` | ✅ Tested |
+| `GET/PUT/DELETE` | `/api/v1/people/{id}` | Fetch/update/purge person + vectors | `PersonCreate` | `PersonResponse` | ✅ Tested |
+| `POST` | `/api/v1/people/with-photo` | Photo upload → InsightFace embedding → Qdrant index | `multipart/form-data` | `PersonResponse` | ✅ Tested |
+| `GET/POST` | `/api/v1/memories` | List/create memory anchors | `MemoryCreate` | `Memory[]` | ✅ Tested |
+| `DELETE` | `/api/v1/memories/{id}` | Delete memory anchor | None | 204 | ✅ Tested |
+| `GET/POST` | `/api/v1/medicines` | List/create medications | `MedicineItem` | `MedicineItem[]` | ✅ Tested |
+| `DELETE` | `/api/v1/medicines/{id}` | Delete medication | None | 204 | ✅ Tested |
+| `GET/POST` | `/api/v1/emergency-contacts` | List/create emergency contacts | `EmergencyContact` | `EmergencyContact[]` | ✅ Tested |
+| `DELETE` | `/api/v1/emergency-contacts/{id}` | Delete contact | None | 204 | ✅ Tested |
+| `GET` | `/api/v1/objects` | List tracked objects | None | `Object[]` | ✅ Tested |
+| `GET` | `/api/v1/objects/{class}/location` | Last-seen location for object class | None | `ObjectLocation` | ✅ Tested |
 
 ---
 

@@ -35,7 +35,7 @@
 
     <!-- Massive Senior Action Buttons (76px Height) -->
     <div class="action-grid">
-      <button class="btn-senior btn-senior-primary" onclick="askQuestion()">
+      <button class="btn-senior btn-senior-primary" onclick="askQuestion(this)">
         <span class="btn-icon">🎙️</span>
         <span>Tap to Ask a Question ("Who is she?" or "Where are my glasses?")</span>
       </button>
@@ -80,41 +80,230 @@
 
   <!-- Caregiver Management Mode (Hidden by default) -->
   <main class="senior-container" id="caregiver-view" style="display: none;">
-    <div class="caregiver-panel">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2 style="font-size: 22px;">Caregiver Profile & Memory Management</h2>
-        <button class="btn-senior" style="height: 48px; font-size: 15px;" onclick="addPersonPrompt()">+ Add New Person</button>
-      </div>
 
-      <table class="senior-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Relationship</th>
-            <th>Birthday</th>
-            <th>Key Memory Anchor</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="caregiver-table-body">
-          <tr>
-            <td style="font-weight: 700; color: var(--text-primary);">Sarah Varma</td>
-            <td>Daughter</td>
-            <td>April 14, 1992</td>
-            <td>Brought blueberry muffins yesterday</td>
-            <td><button class="mode-toggle-btn">Edit</button></td>
-          </tr>
-          <tr>
-            <td style="font-weight: 700; color: var(--text-primary);">Dr. Aris Thorne</td>
-            <td>Primary Doctor</td>
-            <td>September 22, 1980</td>
-            <td>Weekly checkup every Tuesday morning</td>
-            <td><button class="mode-toggle-btn">Edit</button></td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Tab Navigation -->
+    <div class="caregiver-tabs" id="caregiver-tabs">
+      <button class="tab-btn active" data-tab="tab-people">👥 People</button>
+      <button class="tab-btn" data-tab="tab-memories">🧠 Memories</button>
+      <button class="tab-btn" data-tab="tab-medicines">💊 Medicines</button>
+      <button class="tab-btn" data-tab="tab-emergency">🚨 Emergency</button>
+      <button class="tab-btn" data-tab="tab-telemetry">📊 Telemetry</button>
+    </div>
+
+    <!-- Tab: People -->
+    <div class="tab-panel active" id="tab-people">
+      <div class="caregiver-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 22px;">Registered People & Biometrics</h2>
+          <button class="btn-senior" style="height: 48px; font-size: 15px;" onclick="openAddPerson()">+ Add New Person</button>
+        </div>
+        <table class="senior-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Relationship</th>
+              <th>Birthday</th>
+              <th>Vector Status</th>
+              <th>Key Memory</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="caregiver-table-body">
+            <tr><td colspan="7" style="text-align:center; color: var(--text-muted);">Loading people from backend…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Memories -->
+    <div class="tab-panel" id="tab-memories" style="display:none;">
+      <div class="caregiver-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 22px;">Memory Anchors & Life Stories</h2>
+          <button class="btn-senior" style="height: 48px; font-size: 15px;" onclick="openAddMemory()">+ Add Memory</button>
+        </div>
+        <table class="senior-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Person</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="memories-table-body">
+            <tr><td colspan="5" style="text-align:center; color: var(--text-muted);">Loading memories…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Medicines -->
+    <div class="tab-panel" id="tab-medicines" style="display:none;">
+      <div class="caregiver-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 22px;">Medication Schedule</h2>
+          <button class="btn-senior" style="height: 48px; font-size: 15px;" onclick="openAddMedicine()">+ Add Medicine</button>
+        </div>
+        <table class="senior-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Dosage</th>
+              <th>Schedule</th>
+              <th>Instructions</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="medicines-table-body">
+            <tr><td colspan="5" style="text-align:center; color: var(--text-muted);">Loading medicines…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Emergency -->
+    <div class="tab-panel" id="tab-emergency" style="display:none;">
+      <div class="caregiver-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 22px;">Emergency Contacts</h2>
+          <button class="btn-senior" style="height: 48px; font-size: 15px;" onclick="openAddEmergency()">+ Add Contact</button>
+        </div>
+        <table class="senior-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Relationship</th>
+              <th>Phone</th>
+              <th>Primary</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="emergency-table-body">
+            <tr><td colspan="5" style="text-align:center; color: var(--text-muted);">Loading contacts…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Telemetry -->
+    <div class="tab-panel" id="tab-telemetry" style="display:none;">
+      <div class="caregiver-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 22px;">System Telemetry (M4 Backend)</h2>
+          <button class="btn-senior" style="height: 44px; font-size: 14px;" onclick="loadHealth()">↻ Refresh</button>
+        </div>
+        <div id="telemetry-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div style="grid-column: span 2; color: var(--text-muted);">Loading telemetry…</div>
+        </div>
+      </div>
+      <div class="caregiver-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 22px;">Patient Voice Query Log</h2>
+        </div>
+        <div id="voice-log" style="color: var(--text-muted);">No queries yet — ask the patient view a question.</div>
+      </div>
     </div>
   </main>
+
+  <!-- Add Person Modal -->
+  <div class="modal-overlay" id="add-person-modal" style="display: none;">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="font-size: 20px;">Register New Person</h2>
+        <button class="mode-toggle-btn" onclick="closeModal('add-person-modal')">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <label class="form-label">Full Name</label>
+        <input type="text" id="person-name" class="form-input" placeholder="e.g. Sarah Varma">
+        <label class="form-label">Relationship to Patient</label>
+        <input type="text" id="person-relation" class="form-input" placeholder="e.g. Daughter, Neighbor">
+        <label class="form-label">Birthday</label>
+        <input type="text" id="person-bday" class="form-input" placeholder="e.g. 1992-04-14">
+        <label class="form-label">Initial Memory Anchor</label>
+        <input type="text" id="person-memory" class="form-input" placeholder="e.g. Brought blueberry muffins yesterday">
+        <label class="form-label">Reference Photo (indexes 512-d face vector into Qdrant)</label>
+        <input type="file" id="person-photo" class="form-input" accept="image/*">
+        <div id="add-person-status" style="font-size: 14px; color: var(--text-muted);"></div>
+        <button class="btn-senior btn-senior-primary" onclick="submitAddPerson()" style="height: 56px; font-size: 16px;">Save & Index Face Vector</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Memory Modal -->
+  <div class="modal-overlay" id="add-memory-modal" style="display: none;">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="font-size: 20px;">Add Memory Anchor</h2>
+        <button class="mode-toggle-btn" onclick="closeModal('add-memory-modal')">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <label class="form-label">Title</label>
+        <input type="text" id="memory-title" class="form-input" placeholder="e.g. Graduated law school">
+        <label class="form-label">Description</label>
+        <input type="text" id="memory-desc" class="form-input" placeholder="e.g. Attended commencement in San Francisco">
+        <label class="form-label">Category</label>
+        <select id="memory-category" class="form-input">
+          <option value="story">Story</option>
+          <option value="life_event">Life Event</option>
+          <option value="song">Song</option>
+          <option value="place">Place</option>
+          <option value="hobby">Hobby</option>
+          <option value="anecdote">Anecdote</option>
+        </select>
+        <label class="form-label">Person Binding (optional)</label>
+        <input type="text" id="memory-person" class="form-input" placeholder="e.g. Sarah Varma">
+        <button class="btn-senior btn-senior-primary" onclick="submitAddMemory()" style="height: 56px; font-size: 16px;">Save Memory</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Medicine Modal -->
+  <div class="modal-overlay" id="add-medicine-modal" style="display: none;">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="font-size: 20px;">Add Medication</h2>
+        <button class="mode-toggle-btn" onclick="closeModal('add-medicine-modal')">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <label class="form-label">Medicine Name</label>
+        <input type="text" id="med-name" class="form-input" placeholder="e.g. Donepezil">
+        <label class="form-label">Dosage</label>
+        <input type="text" id="med-dosage" class="form-input" placeholder="e.g. 10 mg">
+        <label class="form-label">Schedule</label>
+        <input type="text" id="med-schedule" class="form-input" placeholder="e.g. 08:00 AM Daily">
+        <label class="form-label">Instructions</label>
+        <input type="text" id="med-instructions" class="form-input" placeholder="e.g. Take with breakfast">
+        <button class="btn-senior btn-senior-primary" onclick="submitAddMedicine()" style="height: 56px; font-size: 16px;">Save Medicine</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Emergency Contact Modal -->
+  <div class="modal-overlay" id="add-emergency-modal" style="display: none;">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="font-size: 20px;">Add Emergency Contact</h2>
+        <button class="mode-toggle-btn" onclick="closeModal('add-emergency-modal')">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <label class="form-label">Full Name</label>
+        <input type="text" id="em-name" class="form-input" placeholder="e.g. Sarah Varma">
+        <label class="form-label">Relationship</label>
+        <input type="text" id="em-relation" class="form-input" placeholder="e.g. Daughter">
+        <label class="form-label">Phone Number</label>
+        <input type="text" id="em-phone" class="form-input" placeholder="e.g. +1 (555) 234-5678">
+        <label class="form-label">Is Primary Contact</label>
+        <select id="em-primary" class="form-input">
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+        <button class="btn-senior btn-senior-primary" onclick="submitAddEmergency()" style="height: 56px; font-size: 16px;">Save Contact</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

@@ -56,6 +56,8 @@ mobile/
 
 4. **Network Service (`RetrofitClient`):**
    - Connects to the FastAPI backend (`http://10.0.2.2:8000/` for emulator loopback or host LAN IP).
+   - Supports optional API key authentication via `X-API-Key` header interceptor.
+   - Two voice endpoints: `sendVoiceQuery()` (JSON body) and `sendVoiceAudio()` (multipart audio upload for server-side Whisper STT).
 
 ---
 

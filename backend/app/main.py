@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import health, frame, voice, people, memories, medicines, emergency
+from app.auth import APIKeyMiddleware
+from app.routers import health, frame, voice, people, memories, medicines, emergency, objects
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -15,8 +16,11 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*", "X-API-Key"],
 )
+
+# API key authentication for caregiver endpoints
+app.add_middleware(APIKeyMiddleware)
 
 # Include Router Endpoints
 app.include_router(health.router, prefix=settings.API_V1_STR)
@@ -26,6 +30,7 @@ app.include_router(people.router, prefix=settings.API_V1_STR)
 app.include_router(memories.router, prefix=settings.API_V1_STR)
 app.include_router(medicines.router, prefix=settings.API_V1_STR)
 app.include_router(emergency.router, prefix=settings.API_V1_STR)
+app.include_router(objects.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():

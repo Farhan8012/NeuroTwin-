@@ -52,7 +52,7 @@ Generate a short, warm, comforting 2-sentence response for the patient:
                         "prompt": prompt_body,
                         "stream": False
                     },
-                    timeout=5.0
+                    timeout=30.0
                 )
                 if response.status_code == 200:
                     text = response.json().get("response", "").strip()

@@ -41,9 +41,8 @@ NeuroTwin bakes data minimization directly into its core technical architecture:
 
 ## 4. Data Retention, Encryption & Access Control
 
-Key questions to govern technical implementation:
-- **Encryption at Rest:** Is Qdrant payload data encrypted at rest on the M4 MacBook Air storage drive? (AES-256 volume encryption or filesystem-level FileVault encryption required).
-- **Access Control & Authentication:** Caregiver REST APIs must require authenticated token access (e.g., OAuth2 / JWT with HTTPS/TLS) to prevent unauthorized local network access to stored memories, medical records, or family photos.
+- **API Key Authentication:** Implemented in `backend/app/auth.py`. Caregiver CRUD endpoints (`/people`, `/memories`, `/medicines`, `/emergency-contacts`, `/objects`) require the `X-API-Key` header when `NEUROTWIN_API_KEY` is set. Patient-facing endpoints (`/health`, `/frame`, `/voice-query`) remain open for the mobile client. When the env var is unset, auth is disabled for local development.
+- **Encryption at Rest:** Qdrant payload data should be protected via FileVault (macOS full-disk encryption) on the M4 host.
 - **Local Network Isolation:** Operating over a local Wi-Fi network or an encrypted WireGuard VPN tunnel minimizes exposure to public internet interceptors.
 
 ---

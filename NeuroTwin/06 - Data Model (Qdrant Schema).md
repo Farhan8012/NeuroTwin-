@@ -108,11 +108,19 @@ The `objects` collection tracks known physical items (e.g., reading glasses, car
 
 ---
 
+## Point ID Strategy (UUID5 Conversion)
+
+> [!important] Deterministic UUID Mapping
+> Qdrant v1.19+ requires point IDs to be UUIDs or unsigned integers. Human-readable registry IDs (`p_003`, `obj_glasses_01`) are converted to deterministic UUIDs via `uuid.uuid5(NAMESPACE, point_id)` in `qdrant_service.py`. The namespace UUID is fixed (`1b6a4e8c-...`) so the same input always maps to the same output, enabling round-trip lookup without a separate mapping table.
+
+---
+
 ## Payload Indexing & Performance Strategy
 
 To ensure sub-millisecond retrieval on the M4 server:
 - **Payload Indexing:** Create explicit Qdrant payload indices on `person_id`, `name`, `relationship`, and `object_class`.
 - **Filtering:** Vector searches support filtered queries (e.g., match face vector AND filter by active household profile ID).
+- **Object queries:** `latest_object_location()` uses `query_points()` with a filter on `object_class` to retrieve the most recent observation.
 
 ---
 

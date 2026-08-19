@@ -22,6 +22,21 @@ Future architectural decisions must follow the established format:
 
 ## Architectural Decision Records
 
+> [!decision] ADR #9: Qdrant UUID Point ID Conversion
+> **Date:** 2026-08-19  
+> **Alternatives considered:** Use string IDs directly; use integer auto-increment IDs.  
+> **Rationale:** Qdrant v1.19+ requires point IDs to be UUIDs or unsigned integers, not arbitrary strings. Implemented deterministic UUID5 conversion (`uuid.uuid5(NAMESPACE, point_id)`) so that the human-readable registry IDs (`p_003`, `obj_glasses_01`) map consistently to Qdrant point IDs without a lookup table. The `_to_uuid` / `_from_uuid` helpers in `qdrant_service.py` handle the bidirectional conversion.
+
+> [!decision] ADR #8: Persistent JSON Store for Caregiver CRUD
+> **Date:** 2026-08-19  
+> **Alternatives considered:** In-memory Python dicts (original); SQLite; PostgreSQL.  
+> **Rationale:** The memories, medicines, and emergency-contacts routers originally used in-memory Python lists that lost all data on server restart. Replaced with a thread-safe `JSONStore` class that persists to `backend/data/*.json` files. This provides simple durability without requiring a database server, keeping the M4 deployment lightweight. Each store handles its own file, ID generation (UUID12), and CRUD operations with file-level locking.
+
+> [!decision] ADR #7: Voice Query Dual Endpoint Design
+> **Date:** 2026-08-19  
+> **Alternatives considered:** Single endpoint with optional file field.  
+> **Rationale:** The web dashboard sends JSON (`{ patient_query }`) while the Android mobile client sends multipart audio files. Rather than forcing a single polymorphic endpoint, split into `POST /voice-query` (JSON body → direct LLM) and `POST /voice-query/audio` (multipart audio → Whisper STT → LLM → TTS). Both share the same `_synthesize_tts` and `_transcribe_audio` helpers. The JSON endpoint also integrates the TTL-based `context_cache` so the latest visual face match feeds into the LLM prompt automatically.
+
 > [!decision] ADR #6: Senior Patient & Memory-Impaired Accessibility UI Standard
 > **Date:** 2026-08-19  
 > **Alternatives considered:** Technical developer dashboards with small fonts and dense metric tables as default view.  

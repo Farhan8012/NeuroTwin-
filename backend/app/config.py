@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     PIPER_CONFIG_PATH: Path = MODELS_DIR / "piper" / "en_US-lessac-medium.onnx.json"
 
     # Storage
+    DATA_DIR: Path = BASE_DIR / "data"
     STATIC_DIR: Path = BASE_DIR / "static"
     AUDIO_OUT_DIR: Path = STATIC_DIR / "audio"
     PHOTO_OUT_DIR: Path = STATIC_DIR / "photos"

@@ -48,14 +48,15 @@ updated: 2026-08-19
 | [[02 - Architecture Overview]] | Architecture | `draft` |
 | [[03 - Mobile Client (Android)]] | Mobile | `in-progress` |
 | [[04 - Backend (FastAPI on M4)]] | Backend | `in-progress` |
-| [[05 - AI Pipeline]] | AI / ML | `draft` |
-| [[06 - Data Model (Qdrant Schema)]] | Data Model | `draft` |
+| [[05 - AI Pipeline]] | AI / ML | `in-progress` |
+| [[06 - Data Model (Qdrant Schema)]] | Data Model | `in-progress` |
 | [[07 - Caregiver App]] | Caregiver | `in-progress` |
 | [[08 - Tech Stack]] | Architecture | `draft` |
 | [[09 - Decisions Log]] | Planning | `in-progress` |
 | [[10 - Privacy and Ethics]] | Product / Ethics | `draft` |
 | [[11 - Build Roadmap]] | Planning | `in-progress` |
 | [[12 - Open Questions]] | Planning | `in-progress` |
+| [[09 - Decisions Log]] | Planning | `in-progress` |
 | [[13 - Dev Environment and Tooling]] | Dev Tooling | `draft` |
 | [[14 - Glossary]] | Reference | `draft` |
 | [[15 - Original Concept (Archived)]] | Reference | `draft` |

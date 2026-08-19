@@ -1,9 +1,12 @@
 import numpy as np
+import logging
 from typing import List, Tuple, Dict, Any, Optional
 import io
 from PIL import Image
 from app.services.qdrant_service import qdrant_service
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 class FaceEmbeddingService:
     """Server-side face embedding generator and visual recognition manager."""
@@ -57,5 +60,15 @@ class FaceEmbeddingService:
             "hobbies": ["Gardening", "Baking pastries"]
         }
         return True, 0.9421, demo_payload
+
+    def extract_embedding(self, image_bytes: bytes) -> Optional[List[float]]:
+        """Public method to extract a 512-d face embedding from image bytes.
+        Returns None if no face can be detected.
+        """
+        try:
+            return self.generate_embedding(image_bytes)
+        except Exception as e:
+            logger.warning(f"Face embedding extraction failed: {e}")
+            return None
 
 face_service = FaceEmbeddingService()

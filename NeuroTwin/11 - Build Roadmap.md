@@ -50,6 +50,8 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 ### Phase 5: Object Recognition & Location Tracking (Completed)
 - [x] Integrate object detection logging in vision pipeline (`POST /frame`).
 - [x] Build location tracking query responses for misplaced items (glasses, keys).
+- [x] Add `objects` router (`GET /objects`, `GET /objects/{class}/location`).
+- [x] Qdrant `objects` collection with 128-d vectors and `latest_object_location` query.
 
 ---
 
@@ -57,10 +59,17 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 - [x] Design senior-accessible, high-contrast UI with 72px touch targets and 32px headers.
 - [x] Implement web companion interface in `web/` supporting Patient Companion Mode and Caregiver Mode.
 - [x] Connect web interface to FastAPI backend endpoints (`/health`, `/people`, `/memories`, `/medicines`, `/emergency-contacts`).
+- [x] 5-tab Caregiver layout: People / Memories / Medicines / Emergency / Telemetry.
+- [x] Full CRUD modals for Memories, Medicines, and Emergency Contacts.
+- [x] Tab-based navigation with lazy data loading per panel.
 
 ---
 
 ### Phase 7: Hardening, Battery Optimization & Privacy Pass (In Progress)
+- [x] Fix Qdrant client UUID conversion for deterministic point IDs across people/objects.
+- [x] Fix `json_store.py` ID generation bug (empty IDs from payload overriding UUIDs).
+- [x] Increase Ollama LLM timeout from 5s to 30s for 8B model inference.
+- [x] Add visual context cache integration into voice query pipeline for conversational continuity.
 - [ ] Refine Android Foreground Service and WorkManager persistence across device backgrounding.
 - [ ] Benchmark thermal throttling and battery consumption on mobile client over multi-hour runs.
 - [ ] Conduct performance benchmarking on M4 backend (Ollama vs. Groq resource utilization).
