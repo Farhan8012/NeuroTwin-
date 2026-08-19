@@ -20,13 +20,13 @@ Without the caregiver's input, the AI lacks the context required to transform fa
 
 1. **Tab 1: Ambient Vision & Speech Monitor:**
    - Real-time CameraX video frame stream canvas.
-   - On-device ML Kit gating status (`FACE_DETECTED` pass-through indicator).
-   - Live InsightFace 512-d embedding & Qdrant Cosine Similarity score (`0.9421`).
+   - On-device ML Kit gating status (`GATED: ML_KIT_PASS`).
+   - InsightFace 512-d embedding & Cosine Distance score (`0.9421`).
    - Active retained memory payload (Name, Relationship, Last Visit, Anecdotes, Favorite Songs).
    - Patient Voice Query Log table with Whisper STT transcript, LLM story response, and Piper TTS audio trigger.
 
 2. **Tab 2: People & Biometrics Index:**
-   - Table of registered individuals with Qdrant vector status (`512-d INDEXED`).
+   - Table of registered individuals with Qdrant vector status (`512-D QDRANT INDEXED`).
    - Modal form (`+ Register New Person`) to upload photos and index new vectors into Qdrant.
 
 3. **Tab 3: Memory Anchors & Story Repository:**
@@ -42,19 +42,19 @@ Without the caregiver's input, the AI lacks the context required to transform fa
 
 ---
 
-## Design System: Stark Engineering Minimalism (Zero AI Slop)
+## Design System: Vercel Geist Neutral Monochromatic Standard (Zero AI Slop)
 
-> [!decision] Linear / Vercel Dark Design System (ADR #4)
-> The Caregiver Portal intentionally rejects bloated cards, glassmorphism, decorative gradient glows, and AI boilerplate template slop.
+> [!decision] Vercel Geist Grayscale Standard (ADR #4)
+> Grounded in official Vercel Geist design system specifications, the Caregiver Portal strictly eliminates all colored accent text (such as artificial green status pills or blue decorative badges).
 > 
-> **Design Specifications:**
-> - **Canvas & Panels:** Pure dark zinc background (`#09090b`), surface panels (`#121215`), 1px hairline dividers (`#27272a`).
-> - **Typography:** High-contrast zinc typography (`Inter` for UI, `JetBrains Mono` for tabular vectors/IDs/timestamps).
-> - **Instrumentation:** Sparse layout with dense tabular alignment, monospace data keys, and active green dot status indicators (`#22c55e`).
+> **Geist Visual Principles Applied:**
+> - **Strict Grayscale Palette:** Pure dark canvas (`#0a0a0a`), surface cards (`#121212`), 1px solid dividers (`#262626`), near-white text (`#fafafa`), and neutral muted labels (`#737373`).
+> - **Geist Typography:** `Geist` for UI text and `Geist Mono` for tabular vectors, IDs, timestamps, and data columns.
+> - **Zero Slop Restraint:** 0 colorful text highlights or AI template glows. Status indicators rely on neutral grayscale badges (`#171717`).
 
 ---
 
 ## Related Documentation
 - [[04 - Backend (FastAPI on M4)]] — REST API endpoints.
 - [[06 - Data Model (Qdrant Schema)]] — Qdrant vector payload structure.
-- [[09 - Decisions Log]] — ADR #4 (Stark Web Design System).
+- [[09 - Decisions Log]] — ADR #4 (Vercel Geist Design System Standard).

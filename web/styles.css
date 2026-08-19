@@ -1,21 +1,20 @@
-/* NeuroTwin — Linear/Vercel Engineering Dark Design System (Zero AI Slop) */
+/* Vercel Geist Design System — Pure Monochromatic Neutral Slate (Zero Slop) */
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&family=Geist:wght@400;500;600&display=swap');
+
 :root {
-  --bg: #09090b;
-  --surface: #121215;
-  --surface-hover: #18181c;
-  --border: #27272a;
-  --border-subtle: #1f1f23;
+  --ds-background: #0a0a0a;
+  --ds-surface: #121212;
+  --ds-surface-hover: #1a1a1a;
+  --ds-border: #262626;
+  --ds-border-subtle: #1f1f1f;
   
-  --text-high: #f4f4f5;
-  --text-med: #a1a1aa;
-  --text-low: #71717a;
+  --ds-text-primary: #fafafa;
+  --ds-text-secondary: #a1a1aa;
+  --ds-text-muted: #737373;
+  --ds-text-disabled: #525252;
   
-  --accent-green: #22c55e;
-  --accent-green-bg: rgba(34, 197, 94, 0.1);
-  --accent-blue: #3b82f6;
-  
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
 }
 
 * {
@@ -25,11 +24,11 @@
 }
 
 body {
-  background-color: var(--bg);
-  color: var(--text-high);
+  background-color: var(--ds-background);
+  color: var(--ds-text-primary);
   font-family: var(--font-sans);
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   display: flex;
   flex-direction: column;
@@ -37,112 +36,129 @@ body {
   overflow: hidden;
 }
 
-/* Top App Header & Navigation Bar */
-.top-nav {
+/* Header & Top Navigation Bar */
+.geist-header {
   height: 48px;
-  border-bottom: 1px solid var(--border);
-  background-color: var(--bg);
+  border-bottom: 1px solid var(--ds-border);
+  background-color: var(--ds-background);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 16px;
   flex-shrink: 0;
 }
 
-.brand-section {
+.geist-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
-.brand-badge {
+.brand-icon {
+  width: 20px;
+  height: 20px;
+  background: var(--ds-text-primary);
+  color: var(--ds-background);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 12px;
-  background: var(--text-high);
-  color: var(--bg);
-  padding: 2px 6px;
-  border-radius: 2px;
-  letter-spacing: -0.05em;
+  font-size: 11px;
 }
 
-.brand-name {
-  font-size: 14px;
+.brand-text {
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
-.nav-tabs {
+.brand-divider {
+  color: var(--ds-text-disabled);
+  font-family: var(--font-mono);
+}
+
+.brand-sub {
+  font-size: 12px;
+  color: var(--ds-text-secondary);
+}
+
+/* Navigation Tabs */
+.geist-nav {
   display: flex;
   align-items: center;
   gap: 2px;
   height: 100%;
 }
 
-.tab-btn {
+.geist-tab {
   height: 100%;
-  padding: 0 14px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
   gap: 6px;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--text-med);
+  color: var(--ds-text-secondary);
   font-size: 13px;
   font-weight: 400;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.1s ease;
 }
 
-.tab-btn:hover {
-  color: var(--text-high);
-  background-color: var(--surface-hover);
+.geist-tab:hover {
+  color: var(--ds-text-primary);
 }
 
-.tab-btn.active {
-  color: var(--text-high);
+.geist-tab.active {
+  color: var(--ds-text-primary);
   font-weight: 500;
-  border-bottom-color: var(--text-high);
+  border-bottom-color: var(--ds-text-primary);
 }
 
-.tab-num {
+.tab-index {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--text-low);
+  color: var(--ds-text-muted);
 }
 
-.status-section {
+.geist-status {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   font-family: var(--font-mono);
   font-size: 11px;
+  color: var(--ds-text-muted);
 }
 
-.indicator-pill {
+.status-tag {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--accent-green);
+  padding: 2px 8px;
+  border: 1px solid var(--ds-border);
+  border-radius: 4px;
+  color: var(--ds-text-secondary);
 }
 
-.indicator-dot {
-  width: 6px;
-  height: 6px;
+.status-dot {
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background-color: var(--accent-green);
+  background-color: var(--ds-text-primary);
 }
 
-/* Main Layout Area */
-.app-container {
+/* App Main Container */
+.geist-main {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.tab-content {
+.tab-pane {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
@@ -151,262 +167,257 @@ body {
   gap: 20px;
 }
 
-.header-title-bar {
+.title-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 
-.title-text {
-  font-size: 16px;
+.title-heading {
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
-.subtitle-text {
+.title-description {
   font-size: 12px;
-  color: var(--text-med);
+  color: var(--ds-text-secondary);
   margin-top: 2px;
 }
 
-/* Grid Layouts */
-.grid-main-split {
+/* Two Column Layout */
+.layout-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1.1fr 1fr;
   gap: 16px;
 }
 
-.grid-table-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-/* Stark Panel Component */
-.panel {
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+/* Geist Card / Panel */
+.geist-card {
+  background-color: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 6px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.panel-header {
+.card-header {
   padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ds-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: rgba(255, 255, 255, 0.01);
 }
 
-.panel-title {
-  font-size: 12px;
+.card-title-text {
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-med);
+  color: var(--ds-text-secondary);
   font-family: var(--font-mono);
 }
 
-.panel-body {
-  padding: 16px;
+.card-content {
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
-/* Camera Stream Stark Canvas */
-.video-canvas {
+/* Video Frame Neutral Preview */
+.frame-preview {
   width: 100%;
-  height: 220px;
-  background-color: #030304;
-  border: 1px solid var(--border-subtle);
-  border-radius: 2px;
+  height: 200px;
+  background-color: #050505;
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: 4px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.bounding-box {
+.frame-box {
   position: absolute;
-  top: 35px;
+  top: 30px;
   left: 36%;
-  width: 120px;
-  height: 130px;
-  border: 1px solid var(--text-high);
+  width: 110px;
+  height: 120px;
+  border: 1px solid var(--ds-text-primary);
 }
 
-.bounding-tag {
+.frame-label {
   position: absolute;
-  top: -20px;
+  top: -18px;
   left: -1px;
-  background: var(--text-high);
-  color: var(--bg);
+  background: var(--ds-text-primary);
+  color: var(--ds-background);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   font-family: var(--font-mono);
   padding: 1px 4px;
 }
 
-/* Data Key-Value Table */
-.kv-table {
+/* Geist Key-Value Table */
+.geist-kv {
   width: 100%;
   border-collapse: collapse;
 }
 
-.kv-table tr {
-  border-bottom: 1px solid var(--border-subtle);
+.geist-kv tr {
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 
-.kv-table tr:last-child {
+.geist-kv tr:last-child {
   border-bottom: none;
 }
 
-.kv-key {
+.geist-kv td {
   padding: 8px 0;
-  color: var(--text-low);
+  font-size: 12px;
+}
+
+.kv-label {
+  color: var(--ds-text-muted);
   font-family: var(--font-mono);
   font-size: 11px;
   width: 140px;
 }
 
-.kv-val {
-  padding: 8px 0;
-  color: var(--text-high);
-  font-weight: 400;
+.kv-value {
+  color: var(--ds-text-primary);
 }
 
-/* Linear-Style Data Tables */
-.table-container {
+/* Data Table */
+.table-frame {
   width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  border: 1px solid var(--ds-border);
+  border-radius: 6px;
   overflow: hidden;
-  background-color: var(--surface);
+  background-color: var(--ds-surface);
 }
 
-.stark-table {
+.geist-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
 }
 
-.stark-table th {
+.geist-table th {
   padding: 10px 14px;
-  background-color: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid var(--border);
-  color: var(--text-low);
+  background-color: rgba(255, 255, 255, 0.01);
+  border-bottom: 1px solid var(--ds-border);
+  color: var(--ds-text-muted);
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.stark-table td {
+.geist-table td {
   padding: 10px 14px;
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-med);
+  border-bottom: 1px solid var(--ds-border-subtle);
+  color: var(--ds-text-secondary);
   font-size: 13px;
 }
 
-.stark-table tr:last-child td {
+.geist-table tr:last-child td {
   border-bottom: none;
 }
 
-.stark-table tr:hover td {
-  background-color: var(--surface-hover);
-  color: var(--text-high);
+.geist-table tr:hover td {
+  background-color: var(--ds-surface-hover);
+  color: var(--ds-text-primary);
 }
 
-/* Buttons & Input Elements */
-.btn {
+/* Neutral Buttons */
+.geist-btn {
   padding: 6px 12px;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  color: var(--text-high);
-  transition: all 0.15s ease;
+  border: 1px solid var(--ds-border);
+  background-color: var(--ds-surface);
+  color: var(--ds-text-primary);
+  transition: all 0.1s ease;
 }
 
-.btn:hover {
-  background-color: var(--surface-hover);
-  border-color: var(--text-med);
+.geist-btn:hover {
+  background-color: var(--ds-surface-hover);
+  border-color: var(--ds-text-secondary);
 }
 
-.btn-primary {
-  background-color: var(--text-high);
-  color: var(--bg);
-  border: none;
+.geist-btn-primary {
+  background-color: var(--ds-text-primary);
+  color: var(--ds-background);
+  border: 1px solid var(--ds-text-primary);
 }
 
-.btn-primary:hover {
-  background-color: #e4e4e7;
+.geist-btn-primary:hover {
+  background-color: #e5e5e5;
 }
 
-.tag-item {
+.geist-badge {
   display: inline-block;
-  background-color: #18181b;
-  border: 1px solid var(--border);
-  padding: 2px 8px;
-  border-radius: 2px;
+  background-color: #171717;
+  border: 1px solid var(--ds-border);
+  padding: 2px 6px;
+  border-radius: 4px;
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--text-med);
+  color: var(--ds-text-secondary);
 }
 
-/* Modal Form Overlay */
-.modal-overlay {
+/* Modal Window */
+.geist-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
-.modal-card {
-  width: 480px;
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+.geist-modal {
+  width: 440px;
+  background-color: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 6px;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.form-group {
+.form-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.form-label {
+.field-label {
   font-size: 11px;
   font-family: var(--font-mono);
-  color: var(--text-low);
+  color: var(--ds-text-muted);
   text-transform: uppercase;
 }
 
-.form-input {
+.field-input {
   padding: 8px 10px;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text-high);
+  background-color: var(--ds-background);
+  border: 1px solid var(--ds-border);
+  border-radius: 4px;
+  color: var(--ds-text-primary);
   font-size: 13px;
   outline: none;
 }
 
-.form-input:focus {
-  border-color: var(--text-high);
+.field-input:focus {
+  border-color: var(--ds-text-primary);
 }

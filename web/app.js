@@ -1,4 +1,4 @@
-// NeuroTwin Caregiver Portal Application Controller
+// NeuroTwin Vercel Geist Caregiver Console Controller
 const API_BASE = "http://localhost:8000/api/v1";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -17,8 +17,8 @@ function updateClock() {
 }
 
 function switchTab(tabId, btnEl) {
-  document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
-  document.querySelectorAll(".tab-content").forEach(content => content.style.display = "none");
+  document.querySelectorAll(".geist-tab").forEach(btn => btn.classList.remove("active"));
+  document.querySelectorAll(".tab-pane").forEach(content => content.style.display = "none");
   
   if (btnEl) btnEl.classList.add("active");
   const target = document.getElementById(tabId);
@@ -64,13 +64,13 @@ function renderPeopleTable(peopleList) {
   tableBody.innerHTML = peopleList.map(p => `
     <tr>
       <td style="font-family: var(--font-mono); font-size: 11px;">${p.id}</td>
-      <td style="font-weight: 600; color: var(--text-high);">${p.name}</td>
+      <td style="font-weight: 500; color: var(--ds-text-primary);">${p.name}</td>
       <td>${p.relationship}</td>
       <td>${p.birthday || 'N/A'}</td>
-      <td><span class="tag-item" style="color: var(--accent-green);">QDRANT 512-D INDEXED</span></td>
+      <td><span class="geist-badge">512-D QDRANT INDEXED</span></td>
       <td>${(p.memories && p.memories[0]) ? p.memories[0] : 'No anchor logged'}</td>
       <td>
-        <button class="btn" style="font-size: 11px;">Edit Profile</button>
+        <button class="geist-btn" style="font-size: 11px;">Edit Profile</button>
       </td>
     </tr>
   `).join('');
@@ -162,4 +162,9 @@ async function simulateVoiceQuery() {
 
 function playAudioDemo() {
   alert("Playing synthesized Piper TTS audio stream through patient earpiece...");
+}
+
+function fetchTelemetry() {
+  fetchHealthStatus();
+  alert("Telemetry metrics refreshed from M4 FastAPI backend.");
 }
