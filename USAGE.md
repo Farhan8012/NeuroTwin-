@@ -59,27 +59,65 @@ curl http://localhost:11434/api/tags
 # Should show qwen3:8b in the models list
 ```
 
+### Seed the database with sample data
+```bash
+cd backend
+.venv/bin/python seed.py
+```
+
+This populates:
+- 3 sample people (Sarah Varma, Dr. Thorne, Robert Lowe) with face vectors in Qdrant
+- 5 memory anchors (life events, songs, stories)
+- 4 medications (Donepezil, Memantine, Vitamin D3, Melatonin)
+- 3 emergency contacts
+
+Safe to run multiple times — skips existing data.
+
 ---
 
 ## 2. Starting the System
 
-Open **3 terminals** (or use background processes):
+### Option A: One-Command Startup (Recommended)
 
-### Terminal 1: Qdrant Vector Database
+```bash
+# Start all 3 services with one command
+./start.sh
+
+# Other commands:
+./start.sh --status    # Check what's running
+./start.sh --stop      # Stop everything
+./start.sh --docker    # Use Docker Compose instead
+```
+
+This starts Qdrant, FastAPI, and the web dashboard automatically with health checks.
+
+### Option B: Docker Compose
+
+```bash
+docker compose up --build
+```
+
+This runs Qdrant + FastAPI in containers. Ollama runs on the host machine and is accessed via `host.docker.internal`. The web dashboard still needs to be served separately:
+
+```bash
+cd web && python3 -m http.server 5500
+```
+
+### Option C: Manual (3 terminals)
+
+**Terminal 1 — Qdrant:**
 ```bash
 cd backend
 ./qdrant/bin/qdrant --config-path qdrant/config.yaml
 ```
-Wait until you see `Welcome to Qdrant` on port 6333.
 
-### Terminal 2: FastAPI Backend
+**Terminal 2 — FastAPI:**
 ```bash
 cd backend
 .venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
-Wait until you see `Uvicorn running on http://0.0.0.0:8000`.
 
-### Terminal 3: Web Dashboard
+**Terminal 3 — Web Dashboard:**
 ```bash
 cd web
 python3 -m http.server 5500
@@ -87,10 +125,13 @@ python3 -m http.server 5500
 
 ### Verify everything is running
 ```bash
+# Check all services
+./start.sh --status
+
 # Backend health check
 curl http://localhost:8000/api/v1/health
 
-# Web dashboard
+# Open web dashboard
 open http://localhost:5500
 ```
 
@@ -282,7 +323,12 @@ The mobile app is in `mobile/` and requires Android Studio.
 
 ```
 Neuro_Twin/
+├── start.sh                  # One-command startup script
+├── docker-compose.yml        # Docker Compose (Qdrant + FastAPI)
+├── USAGE.md                  # This file
 ├── backend/
+│   ├── Dockerfile            # Backend container build
+│   ├── seed.py               # Database seed script
 │   ├── app/
 │   │   ├── main.py              # FastAPI app + middleware
 │   │   ├── config.py            # Environment settings

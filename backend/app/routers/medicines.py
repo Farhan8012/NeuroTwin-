@@ -7,32 +7,9 @@ router = APIRouter(prefix="/medicines", tags=["Caregiver - Medications"])
 
 _medicines_store = JSONStore("medicines.json")
 
-# Seed default data on first run
-_DEFAULT_MEDICINES = [
-    {
-        "name": "Donepezil",
-        "dosage": "10 mg",
-        "schedule_time": "08:00 AM Daily",
-        "instructions": "Take with breakfast water"
-    },
-    {
-        "name": "Memantine",
-        "dosage": "10 mg",
-        "schedule_time": "08:00 PM Daily",
-        "instructions": "Take after evening meal"
-    },
-]
-
-
-def _seed_if_empty():
-    if not _medicines_store.list():
-        for m in _DEFAULT_MEDICINES:
-            _medicines_store.create(m)
-
 
 @router.get("", response_model=List[MedicineItem])
 async def list_medicines():
-    _seed_if_empty()
     return _medicines_store.list()
 
 

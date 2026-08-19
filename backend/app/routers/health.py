@@ -11,7 +11,7 @@ router = APIRouter(prefix="/health", tags=["Health & Telemetry"])
 
 def _qdrant_status() -> str:
     try:
-        qdrant_service.get_client().get_collections()
+        qdrant_service.client.get_collections()
         return "connected"
     except Exception:
         return "disconnected"

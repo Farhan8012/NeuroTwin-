@@ -7,32 +7,9 @@ router = APIRouter(prefix="/emergency-contacts", tags=["Caregiver - Emergency Co
 
 _contacts_store = JSONStore("emergency_contacts.json")
 
-# Seed default data on first run
-_DEFAULT_CONTACTS = [
-    {
-        "name": "Sarah Varma",
-        "relationship": "Daughter",
-        "phone": "+1 (555) 234-5678",
-        "is_primary": True
-    },
-    {
-        "name": "Dr. Aris Thorne",
-        "relationship": "Neurologist",
-        "phone": "+1 (555) 987-6543",
-        "is_primary": False
-    },
-]
-
-
-def _seed_if_empty():
-    if not _contacts_store.list():
-        for c in _DEFAULT_CONTACTS:
-            _contacts_store.create(c)
-
 
 @router.get("", response_model=List[EmergencyContact])
 async def list_emergency_contacts():
-    _seed_if_empty()
     return _contacts_store.list()
 
 

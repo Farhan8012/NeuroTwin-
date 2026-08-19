@@ -6,6 +6,7 @@ __pycache__/
 
 # Backend runtime artifacts
 backend/.venv/
+backend/.env
 backend/models/
 backend/qdrant/storage/
 backend/qdrant/snapshots/
@@ -15,6 +16,12 @@ backend/static/
 backend/uploads/
 backend/data/
 .qdrant-initialized
+
+# Logs
+logs/
+
+# Docker
+backend/models/
 
 # Test fixtures
 /tmp/
