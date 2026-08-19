@@ -1,12 +1,12 @@
 # NeuroTwin — Docker Compose
-# Starts Qdrant vector DB + FastAPI backend in one command.
+# Starts Qdrant + FastAPI + Web Dashboard in one command.
 #
 # Usage:
 #   docker compose up --build
 #   docker compose down
+#   docker compose ps
 #
-# The web dashboard is a static site — serve it separately:
-#   cd web && python3 -m http.server 5500
+# Ollama runs on the host machine and is accessed via host.docker.internal.
 
 services:
   qdrant:
@@ -23,6 +23,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
 
   backend:
     build:
@@ -48,6 +49,23 @@ services:
       - backend_models:/app/models
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  web:
+    image: nginx:alpine
+    ports:
+      - "5500:80"
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   qdrant_data:

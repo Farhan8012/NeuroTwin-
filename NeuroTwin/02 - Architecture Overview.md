@@ -41,6 +41,7 @@ flowchart TD
         Filter["ML Kit Face/Object Filter (Local Gate)"]
         Mic["Microphone (Audio Capture)"]
         Speaker["Bluetooth Earbud/Speaker (Audio Playback)"]
+        BLE["BLE Scanner (Beacon RSSI Reporting)"]
     end
 
     subgraph Backend["M4 MacBook Air (FastAPI Backend Host)"]
@@ -63,6 +64,7 @@ flowchart TD
     Context --> LLM
     LLM --> TTS
     TTS --> Speaker
+    BLE -->|"RSSI reports"| Upload
 ```
 
 ---

@@ -47,6 +47,12 @@ interface NeuroTwinApi {
         @Part audio: MultipartBody.Part,
         @Part("visual_context") visualContext: okhttp3.RequestBody? = null
     ): Response<VoiceResponse>
+
+    /** Report BLE beacon RSSI reading for room-level triangulation. */
+    @POST("api/v1/ble/rssi")
+    suspend fun reportBLE(
+        @Body data: Map<String, Any>
+    ): Response<Map<String, Any>>
 }
 
 object RetrofitClient {

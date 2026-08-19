@@ -18,11 +18,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app/ app/
+COPY seed.py .
 COPY .env.example .env
 
 # Create required directories
-RUN mkdir -p data static/audio static/photos models/qdrant
+RUN mkdir -p data static/audio static/photos models/insightface models/whisper models/piper
 
 EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -f http://localhost:8000/api/v1/health || exit 1
 
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

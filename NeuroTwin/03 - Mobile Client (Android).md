@@ -34,11 +34,12 @@ mobile/
             ├── ml/
             │   └── MlKitFilter.kt            # Local ML Kit Face Detection Gating
             ├── network/
-            │   └── NeuroTwinApiService.kt    # Retrofit client for FastAPI backend
+            │   └── NeuroTwinApiService.kt    # Retrofit client (frame, voice, BLE endpoints)
             └── service/
                 ├── CameraForegroundService.kt  # CameraX pipeline + ML Kit gating + upload
                 ├── VoiceRecorder.kt             # WAV recording (16kHz mono PCM)
-                └── VoiceConversationManager.kt  # Full record→send→play conversation loop
+                ├── VoiceConversationManager.kt  # Full record→send→play conversation loop
+                └── BLEScannerService.kt         # Background BLE beacon scanning + RSSI reporting
 ```
 
 ---
@@ -69,7 +70,14 @@ mobile/
    - Response audio is played back through the device speaker or Bluetooth earpiece.
    - Falls back to text query via `sendVoiceQuery()` when microphone is unavailable.
 
-6. **UI State Management:**
+6. **BLE Scanning (`BLEScannerService`):**
+   - Background foreground service scanning for registered BLE beacons.
+   - Low-power scan mode (60s intervals, 10s windows) to minimize battery drain.
+   - Reports RSSI values to `POST /api/v1/ble/rssi` for room-level triangulation.
+   - Deduplicates: only reports each beacon once per 5s window.
+   - Broadcasts scan results to UI for real-time location display.
+
+7. **UI State Management:**
    - Animated button states: Recording (red) → Thinking (sending) → Playing (response).
    - Response card displays LLM text with audio playback button.
    - Quick-action text buttons for common queries ("Who is this?", "Where are my glasses?").
@@ -84,9 +92,12 @@ The `AndroidManifest.xml` declares and dynamically requests:
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.RECORD_AUDIO" />
 <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 <uses-permission android:name="android.permission.INTERNET" />
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 ```

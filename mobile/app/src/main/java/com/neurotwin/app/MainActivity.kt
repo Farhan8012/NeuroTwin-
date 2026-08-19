@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.neurotwin.app.network.RetrofitClient
 import com.neurotwin.app.network.VoiceRequest
+import com.neurotwin.app.service.BLEScannerService
 import com.neurotwin.app.service.CameraForegroundService
 import com.neurotwin.app.service.VoiceConversationManager
 import kotlinx.coroutines.launch
@@ -115,11 +116,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startCameraService() {
-        val intent = Intent(this, CameraForegroundService::class.java)
+        val cameraIntent = Intent(this, CameraForegroundService::class.java)
+        val bleIntent = Intent(this, BLEScannerService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
+            startForegroundService(cameraIntent)
+            startForegroundService(bleIntent)
         } else {
-            startService(intent)
+            startService(cameraIntent)
+            startService(bleIntent)
         }
     }
 }

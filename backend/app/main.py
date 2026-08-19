@@ -7,7 +7,53 @@ from app.routers import health, frame, voice, people, memories, medicines, emerg
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Central Orchestrator Backend for NeuroTwin — AI Cognitive Companion"
+    description="""
+# NeuroTwin — AI Cognitive Companion Backend
+
+Central orchestrator for the NeuroTwin memory support system. Provides:
+
+## Patient Pipeline
+- **Face Recognition:** Upload camera frames → InsightFace 512-d embedding → Qdrant cosine search → person context
+- **Object Detection:** YOLOv8-nano household object detection with Qdrant location tracking
+- **Voice Queries:** Text or audio → Whisper STT → Ollama LLM → Piper TTS → WAV response
+- **Context Caching:** In-memory TTL cache for visual context continuity between frame and voice
+
+## Caregiver Management
+- **People:** Register profiles, upload photos, index face vectors into Qdrant
+- **Memories:** Life stories, songs, anecdotes for conversational warmth
+- **Medications:** Schedule and dosage tracking
+- **Emergency Contacts:** Primary and secondary contacts
+- **BLE Beacons:** Room-level object location via RSSI triangulation
+
+## Quick Start
+```bash
+# Start all services
+./start.sh
+
+# Or with Docker
+docker compose up --build
+
+# Seed sample data
+cd backend && .venv/bin/python seed.py
+```
+
+## Authentication
+Caregiver endpoints require `X-API-Key` header when `NEUROTWIN_API_KEY` is set.
+Patient-facing endpoints (`/health`, `/frame`, `/voice-query`) are always open.
+""",
+    contact={"name": "NeuroTwin Team"},
+    license_info={"name": "MIT"},
+    openapi_tags=[
+        {"name": "Health & Telemetry", "description": "System health, component status, and M4 metrics"},
+        {"name": "Vision Pipeline", "description": "Camera frame processing and face recognition"},
+        {"name": "Voice Pipeline", "description": "Voice queries with STT, LLM reasoning, and TTS"},
+        {"name": "Caregiver - People Management", "description": "Register, update, and delete person profiles with face vectors"},
+        {"name": "Caregiver - Memories & Stories", "description": "Memory anchors, life events, songs, and anecdotes"},
+        {"name": "Caregiver - Medications", "description": "Medication schedule and dosage tracking"},
+        {"name": "Caregiver - Emergency Contacts", "description": "Emergency contact management"},
+        {"name": "Object Tracking", "description": "Household object detection and location tracking"},
+        {"name": "BLE Beacon Tracking", "description": "Bluetooth Low Energy beacon registration and RSSI triangulation"},
+    ],
 )
 
 # Enable CORS for Caregiver Web Dashboard & Mobile Client

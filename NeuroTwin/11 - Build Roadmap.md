@@ -56,6 +56,8 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 - [x] Objects indexed to Qdrant with embeddings for location tracking.
 - [x] Add BLE beacon service (`ble_service.py`) for room-level RSSI triangulation.
 - [x] Add `ble` router with beacon registration, RSSI reporting, and location queries.
+- [x] Add `BLEScannerService` (background foreground service) for continuous beacon scanning.
+- [x] Add 32-endpoint OpenAPI schema with examples, descriptions, and 9 tagged categories.
 
 ---
 
@@ -84,6 +86,7 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 - [x] Create 58-test pytest suite under `backend/tests/` covering all endpoints.
 - [x] Add BLE beacon service for room-level RSSI triangulation.
 - [x] Update all Obsidian vault documentation.
+- [x] Docker Compose deployment with Qdrant + FastAPI + Nginx web dashboard.
 - [ ] Refine Android Foreground Service and WorkManager persistence across device backgrounding.
 - [ ] Benchmark thermal throttling and battery consumption on mobile client over multi-hour runs.
 
