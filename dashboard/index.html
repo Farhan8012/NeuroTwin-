@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NeuroTwin — AI Cognitive & Memory Companion</title>
+    <meta name="description" content="NeuroTwin is an AI-powered cognitive memory companion for Alzheimer's & Dementia patients and caregivers." />
+    
+    <!-- Custom NeuroTwin Favicon (Brain Icon) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23172839'/><circle cx='16' cy='16' r='9' fill='%2338B2AC'/><path d='M12 16c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4' stroke='%23ffffff' stroke-width='2' fill='none'/></svg>" />
+
+    <!-- Tailwind CSS Engine -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+              "surface-container-high": "#e9e7e9",
+              "error": "#ba1a1a",
+              "on-tertiary-fixed": "#281801",
+              "on-error-container": "#93000a",
+              "secondary-fixed-dim": "#b2c9e1",
+              "secondary": "#4b6176",
+              "on-tertiary": "#ffffff",
+              "inverse-on-surface": "#f2f0f2",
+              "primary-container": "#2d3e50",
+              "outline-variant": "#c4c6cd",
+              "on-secondary-fixed": "#041d30",
+              "inverse-surface": "#303032",
+              "on-primary-fixed": "#0a1d2d",
+              "background": "#fbf9fa",
+              "surface-variant": "#e4e2e3",
+              "surface-dim": "#dbd9db",
+              "on-secondary-fixed-variant": "#33495d",
+              "primary": "#172839",
+              "on-tertiary-fixed-variant": "#584325",
+              "surface-container-low": "#f5f3f4",
+              "on-background": "#1b1c1d",
+              "surface": "#fbf9fa",
+              "surface-container-highest": "#e4e2e3",
+              "primary-fixed-dim": "#b6c8df",
+              "outline": "#74777d",
+              "error-container": "#ffdad6",
+              "surface-tint": "#4f6073",
+              "primary-fixed": "#d2e4fb",
+              "on-primary-container": "#97a9be",
+              "surface-bright": "#fbf9fa",
+              "secondary-container": "#cbe2fb",
+              "on-secondary-container": "#4f657a",
+              "on-primary": "#ffffff",
+              "on-surface-variant": "#43474c",
+              "on-error": "#ffffff",
+              "secondary-fixed": "#cee5fe",
+              "inverse-primary": "#b6c8df",
+              "tertiary": "#352408",
+              "on-secondary": "#ffffff",
+              "tertiary-container": "#4d391c",
+              "tertiary-fixed": "#feddb5",
+              "tertiary-fixed-dim": "#e0c29b",
+              "on-primary-fixed-variant": "#37485b",
+              "surface-container-lowest": "#ffffff",
+              "surface-container": "#efedef",
+              "on-tertiary-container": "#bfa37e",
+              "on-surface": "#1b1c1d"
+            },
+            "borderRadius": {
+              "DEFAULT": "0.25rem",
+              "lg": "0.5rem",
+              "xl": "12px",
+              "2xl": "16px",
+              "full": "9999px"
+            },
+            "spacing": {
+              "md": "16px",
+              "lg": "24px",
+              "base": "8px",
+              "gutter": "16px",
+              "xl": "32px",
+              "container-margin": "24px",
+              "2xl": "48px",
+              "xs": "4px",
+              "3xl": "64px",
+              "sm": "8px"
+            },
+            "fontFamily": {
+              "sans": ["Inter", "sans-serif"]
+            },
+          },
+        },
+      }
+    </script>
+  </head>
+  <body class="bg-background text-on-surface antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

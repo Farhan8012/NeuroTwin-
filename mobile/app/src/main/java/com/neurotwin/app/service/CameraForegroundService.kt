@@ -16,6 +16,9 @@ import androidx.lifecycle.LifecycleOwner
 import com.google.common.util.concurrent.ListenableFuture
 import com.neurotwin.app.ml.MlKitFilter
 import com.neurotwin.app.network.RetrofitClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -142,12 +145,9 @@ class CameraForegroundService : Service(), LifecycleOwner {
             val framePart = MultipartBody.Part.createFormData("file", "frame_${frameCount++}.jpg", requestFile)
 
             // Fire-and-forget upload (don't block camera pipeline)
-            val call = RetrofitClient.instance.uploadFrame(framePart)
-            call.enqueue(object : retrofit2.Callback<com.neurotwin.app.network.FrameResponse> {
-                override fun onResponse(
-                    call: retrofit2.Call<com.neurotwin.app.network.FrameResponse>,
-                    response: retrofit2.Response<com.neurotwin.app.network.FrameResponse>
-                ) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val response = RetrofitClient.instance.uploadFrame(framePart)
                     if (response.isSuccessful) {
                         val body = response.body()
                         if (body?.matched == true) {
@@ -155,17 +155,12 @@ class CameraForegroundService : Service(), LifecycleOwner {
                             broadcastRecognition(body)
                         }
                     }
-                    isProcessing.set(false)
-                }
-
-                override fun onFailure(
-                    call: retrofit2.Call<com.neurotwin.app.network.FrameResponse>,
-                    t: Throwable
-                ) {
+                } catch (t: Throwable) {
                     Log.w(TAG, "Frame upload failed: ${t.message}")
+                } finally {
                     isProcessing.set(false)
                 }
-            })
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Frame processing error", e)
             isProcessing.set(false)

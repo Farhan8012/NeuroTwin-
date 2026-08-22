@@ -66,8 +66,14 @@ dependencies {
     implementation(libs.androidx.camera.view)
 
     // ML Kit dependencies
-    implementation(libs.play.services.mlkit.face.detection)
-    implementation(libs.play.services.mlkit.object.detection)
+    implementation(libs.mlkit.face.detection)
+    implementation(libs.`object`.detection)
+
+    // Navigation & ViewModel
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.coil.compose)
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Networking
     implementation(libs.retrofit)

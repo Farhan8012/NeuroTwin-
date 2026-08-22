@@ -173,14 +173,14 @@ class BLEScannerService : Service() {
         reportToBackend(beaconId, rssi)
     }
 
-    private fun reportToBackend(beaconId: String, rssi: Float) {
+    private fun reportToBackend(beaconId: String, rssi: Int) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val receiverId = "rx_${getRoomFromDeviceName(beaconId)}"
                 val data = mapOf(
                     "beacon_id" to beaconId,
                     "receiver_id" to receiverId,
-                    "rssi" to rssi
+                    "rssi" to rssi.toFloat()
                 )
 
                 val response = RetrofitClient.instance.reportBLE(data)
