@@ -150,6 +150,20 @@ To ensure sub-millisecond retrieval on the M4 server:
 
 ---
 
+## 4. Supabase Postgres Mirror (Relational Layer)
+
+> [!note] Added 2026-08-22
+> All non-vector state is mirrored write-through to Supabase Postgres (project `jhsgxhotzowzjjoridzy`, ap-southeast-1) so the data survives local wipes and is queryable from the dashboard/mobile without hitting the M4.
+
+- **Sync engine:** `backend/app/services/supabase_sync.py` — every `JSONStore` / `people_store` mutation fires an async mirror to PostgREST using the service-role key. Local JSON stays the fast read path; Supabase failures are logged and swallowed.
+- **Tables:** `patients` ← everything hangs off this; `people` (text[] profile arrays, `vector_status`, photo URLs); `memories` (+ `person_binding` name column, FK-resolvable via people); `medicines`; `emergency_contacts` (partial unique index = one primary per patient); `object_logs` (YOLO + BLE history); `ble_beacons` (tags **and** fixed receivers via `is_receiver`); `ble_rssi_log`.
+- **ID strategy:** text PKs matching backend-generated ids (`p_101`, truncated uuids) — drop-in compatible, no backfill needed.
+- **Startup hydration:** if a local JSON file is empty but the cloud table has rows (fresh clone), the cloud copy is pulled down before serving traffic.
+- **Security:** RLS enabled on all tables with no public policies — only the service key can read/write. Tighten with Supabase Auth policies when caregiver accounts land.
+- **Tests:** pytest runs fully sandboxed (temp dirs, `*_test` Qdrant collections, sync force-disabled) — production data can never be touched by a test run.
+
+---
+
 ## Related Documentation
 - [[04 - Backend (FastAPI on M4)]] — FastAPI service interacting with Qdrant.
 - [[05 - AI Pipeline]] — Embedding generation and similarity score thresholds.

@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     # Visual context cache TTL (seconds) for conversational continuity
     CONTEXT_CACHE_TTL: int = 120
 
+    # Supabase (Postgres mirror; empty = syncing disabled)
+    SUPABASE_URL: str = ""
+    SUPABASE_SERVICE_KEY: str = ""
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

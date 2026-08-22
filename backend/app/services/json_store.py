@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.config import settings
+from app.services import supabase_sync
 
 logger = logging.getLogger("neurotwin.store")
 
@@ -21,6 +22,7 @@ class JSONStore:
     def __init__(self, filename: str):
         self._file: Path = settings.DATA_DIR / filename
         self._lock = threading.Lock()
+        self._filename = filename
 
     def _now(self) -> str:
         return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -42,6 +44,11 @@ class JSONStore:
         with self._lock:
             return self._load()
 
+    def write_all(self, items: List[Dict[str, Any]]) -> None:
+        """Replace file contents wholesale (used by startup hydration)."""
+        with self._lock:
+            self._save(list(items))
+
     def get(self, item_id: str) -> Optional[Dict[str, Any]]:
         with self._lock:
             for item in self._load():
@@ -61,7 +68,8 @@ class JSONStore:
             }
             items.append(new_item)
             self._save(items)
-            return new_item
+        supabase_sync.sync_create(self._filename, new_item)
+        return new_item
 
     def update(self, item_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         with self._lock:
@@ -70,8 +78,12 @@ class JSONStore:
                 if item.get("id") == item_id:
                     item.update(updates)
                     self._save(items)
-                    return item
-        return None
+                    updated = dict(item)
+                    break
+            else:
+                return None
+        supabase_sync.sync_update(self._filename, updated)
+        return updated
 
     def delete(self, item_id: str) -> bool:
         with self._lock:
@@ -80,4 +92,5 @@ class JSONStore:
             if len(remaining) == len(items):
                 return False
             self._save(remaining)
-            return True
+        supabase_sync.sync_delete(self._filename, item_id)
+        return True

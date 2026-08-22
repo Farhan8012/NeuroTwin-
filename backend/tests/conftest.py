@@ -1,7 +1,69 @@
-"""Shared fixtures for NeuroTwin backend tests."""
+"""Shared fixtures for NeuroTwin backend tests.
 
-import pytest
-from fastapi.testclient import TestClient
+Tests are fully isolated from production state:
+- JSON/static/upload paths point at a throwaway temp dir
+- Qdrant collections are renamed (`*_test`) so real vectors stay untouched
+- Supabase write-through sync is force-disabled
+"""
+
+import os
+import tempfile
+from pathlib import Path
+
+# Must run before app.config is imported anywhere: env beats .env in
+# pydantic-settings, so this guarantees supabase_sync.enabled() is False.
+os.environ["SUPABASE_URL"] = ""
+os.environ["SUPABASE_SERVICE_KEY"] = ""
+
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+_TMP = Path(tempfile.mkdtemp(prefix="neurotwin-tests-"))
+
+
+def _isolated_settings():
+    from app.config import settings as real
+    return real.model_copy(update={
+        "BASE_DIR": _TMP,
+        "DATA_DIR": _TMP / "data",
+        "STATIC_DIR": _TMP / "static",
+        "AUDIO_OUT_DIR": _TMP / "static" / "audio",
+        "PHOTO_OUT_DIR": _TMP / "static" / "photos",
+        "UPLOAD_DIR": _TMP / "uploads",
+        "QDRANT_COLLECTION_PEOPLE": "people_test",
+        "QDRANT_COLLECTION_OBJECTS": "objects_test",
+    })
+
+
+@pytest.fixture(scope="session", autouse=True)
+def isolated_backend():
+    """Swap settings for a sandboxed copy and clean up test collections after."""
+    import app.config as cfg
+    from qdrant_client import QdrantClient
+
+    sandbox = _isolated_settings()
+    original = cfg.settings
+    cfg.settings = sandbox
+    # people_store binds DATA_FILE from settings at import time; repoint it.
+    from app.services import people_store as ps
+    ps.DATA_FILE = sandbox.BASE_DIR / "data" / "people.json"
+
+    # Seed the sandbox so tests that expect sample data find it.
+    try:
+        import seed
+        seed.main()
+    except Exception as exc:  # pragma: no cover
+        print(f"WARNING: sandbox seeding failed: {exc}")
+
+    yield
+
+    client = QdrantClient(host=sandbox.QDRANT_HOST, port=sandbox.QDRANT_PORT)
+    for name in (sandbox.QDRANT_COLLECTION_PEOPLE, sandbox.QDRANT_COLLECTION_OBJECTS):
+        try:
+            client.delete_collection(name)
+        except Exception:
+            pass
+    cfg.settings = original
 
 
 @pytest.fixture(scope="session")

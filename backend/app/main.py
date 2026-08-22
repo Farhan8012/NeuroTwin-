@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.auth import APIKeyMiddleware
 from app.routers import health, frame, voice, people, memories, medicines, emergency, objects, ble, metrics
+from app.services import json_store, people_store, supabase_sync
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -68,6 +70,10 @@ app.add_middleware(
 # API key authentication for caregiver endpoints
 app.add_middleware(APIKeyMiddleware)
 
+# Serve TTS audio + person photos (e.g. /static/audio/response_x.wav)
+settings.STATIC_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
+
 # Include Router Endpoints
 app.include_router(health.router, prefix=settings.API_V1_STR)
 app.include_router(frame.router, prefix=settings.API_V1_STR)
@@ -79,6 +85,34 @@ app.include_router(emergency.router, prefix=settings.API_V1_STR)
 app.include_router(objects.router, prefix=settings.API_V1_STR)
 app.include_router(ble.router, prefix=settings.API_V1_STR)
 app.include_router(metrics.router)  # /metrics is at root, not under /api/v1
+
+
+@app.on_event("startup")
+async def hydrate_from_supabase() -> None:
+    """If a local JSON store is empty but the cloud DB has rows (fresh clone,
+    wiped data dir), pull the cloud copy down before serving traffic."""
+    import logging
+    log = logging.getLogger("neurotwin.supabase")
+    if not supabase_sync.enabled():
+        log.info("Supabase sync disabled (no URL/key configured)")
+        return
+
+    stores = {
+        "memories.json": json_store.JSONStore("memories.json"),
+        "medicines.json": json_store.JSONStore("medicines.json"),
+        "emergency_contacts.json": json_store.JSONStore("emergency_contacts.json"),
+    }
+    for filename, store in stores.items():
+        cloud = supabase_sync.hydrate_if_empty(filename, store.list())
+        if cloud:
+            store.write_all(cloud)
+            log.info("hydrated %s with %d cloud rows", filename, len(cloud))
+
+    cloud_people = people_store.list_people()
+    hydrated = supabase_sync.hydrate_people(cloud_people)
+    if hydrated:
+        people_store.write_all(hydrated)
+        log.info("hydrated people registry with %d cloud rows", len(hydrated))
 
 @app.get("/")
 async def root():

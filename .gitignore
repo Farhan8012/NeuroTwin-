@@ -25,3 +25,18 @@ backend/models/
 
 # Test fixtures
 /tmp/
+# Dashboard (React/Vite)
+dashboard/node_modules/
+dashboard/dev.log
+
+# Secrets
+.env
+backend/.env
+
+# Android build artifacts & machine-local config
+mobile/.gradle/
+mobile/build/
+mobile/app/build/
+mobile/local.properties
+mobile/gradle.properties
+mobile/.idea/

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.config import settings
+from app.services import supabase_sync
 
 logger = logging.getLogger("neurotwin.registry")
 
@@ -45,6 +46,12 @@ def list_people() -> List[Dict[str, Any]]:
         return _load()
 
 
+def write_all(people: List[Dict[str, Any]]) -> None:
+    """Replace registry contents wholesale (used by startup hydration)."""
+    with _lock:
+        _save(list(people))
+
+
 def get_person(person_id: str) -> Optional[Dict[str, Any]]:
     with _lock:
         for p in _load():
@@ -71,7 +78,8 @@ def create_person(payload: Dict[str, Any]) -> Dict[str, Any]:
         }
         people.append(person)
         _save(people)
-        return person
+    supabase_sync.sync_person_create(person)
+    return person
 
 
 def update_person(person_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -82,8 +90,12 @@ def update_person(person_id: str, updates: Dict[str, Any]) -> Optional[Dict[str,
                 p.update(updates)
                 p["updated_at"] = _now()
                 _save(people)
-                return p
-    return None
+                updated = dict(p)
+                break
+        else:
+            return None
+    supabase_sync.sync_person_update(updated)
+    return updated
 
 
 def delete_person(person_id: str) -> bool:
@@ -93,4 +105,5 @@ def delete_person(person_id: str) -> bool:
         if len(remaining) == len(people):
             return False
         _save(remaining)
-        return True
+    supabase_sync.sync_person_delete(person_id)
+    return True
