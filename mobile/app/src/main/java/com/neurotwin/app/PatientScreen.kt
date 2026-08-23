@@ -1,9 +1,14 @@
 package com.neurotwin.app
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -19,12 +24,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -33,8 +40,13 @@ import com.neurotwin.app.auth.AuthState
 import com.neurotwin.app.auth.Mode
 import com.neurotwin.app.caregiver.CaregiverViewModel
 import com.neurotwin.app.data.ApiResult
+import com.neurotwin.app.data.EmergencyContact
+import com.neurotwin.app.data.Medicine
+import com.neurotwin.app.data.Memory
+import com.neurotwin.app.data.Person
 import com.neurotwin.app.network.RetrofitClient
 import com.neurotwin.app.service.VoiceConversationManager
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -44,9 +56,15 @@ fun SeniorPatientMainScreen(
     vm: CaregiverViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    LaunchedEffect(Unit) { vm.refreshAll() }
-
+    val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+
+    var showAllMedsDialog by remember { mutableStateOf(false) }
+    var selectedPerson by remember { mutableStateOf<Person?>(null) }
+
+    LaunchedEffect(Unit) {
+        vm.refreshAll()
+    }
 
     Column(
         modifier = Modifier
@@ -56,72 +74,227 @@ fun SeniorPatientMainScreen(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // App Header with Caregiver Mode switch button
+        // Top Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "NeuroTwin",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1E293B)
-            )
-            TextButton(onClick = { AuthState.enter(Mode.CAREGIVER) }) {
-                Text("⚙️ Caregiver", color = Color(0xFF64748B))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF2563EB)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🧠", fontSize = 18.sp)
+                }
+                Text(
+                    text = "NeuroTwin",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1E293B)
+                )
+            }
+            FilledTonalButton(
+                onClick = { AuthState.enter(Mode.CAREGIVER) },
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = Color(0xFFE2E8F0),
+                    contentColor = Color(0xFF334155)
+                )
+            ) {
+                Text("⚙️ Caregiver", fontWeight = FontWeight.SemiBold)
             }
         }
 
         // Greeting Banner
-        GreetingBanner(vm)
+        GreetingBanner(
+            vm = vm,
+            onTalkClick = {
+                coroutineScope.launch {
+                    scrollState.animateScrollTo(scrollState.maxValue)
+                }
+            },
+            onMemoriesClick = {
+                coroutineScope.launch {
+                    scrollState.animateScrollTo(scrollState.maxValue / 2)
+                }
+            }
+        )
 
-        // Medications
-        MedicationsSection(vm)
+        // Medications Section
+        MedicationsSection(
+            vm = vm,
+            onViewAllClick = { showAllMedsDialog = true }
+        )
 
-        // Family & Friends
-        FamilySection(vm)
+        // Family & Friends Section
+        FamilySection(
+            vm = vm,
+            onPersonClick = { person ->
+                selectedPerson = person
+            }
+        )
 
-        // Featured Memory
-        FeaturedMemorySection(vm)
+        // Featured Memory Section
+        FeaturedMemorySection(
+            vm = vm,
+            voiceManager = voiceManager
+        )
 
-        // SOS Alert
-        SOSCard {
-            Toast.makeText(context, "🚨 SOS ALERT SENT! Care team notified.", Toast.LENGTH_LONG).show()
-        }
+        // SOS Immediate Help
+        SOSCard(
+            contactsResult = vm.contacts,
+            onSosTriggered = {
+                // Dial primary contact if available, or 911 fallback
+                val contacts = (vm.contacts as? ApiResult.Success)?.data ?: emptyList()
+                val primary = contacts.firstOrNull { it.isPrimary } ?: contacts.firstOrNull()
+                if (primary != null && primary.phone.isNotBlank()) {
+                    dialPhone(context, primary.phone)
+                } else {
+                    Toast.makeText(context, "🚨 SOS Alert Sent to Care Team!", Toast.LENGTH_LONG).show()
+                }
+            }
+        )
 
-        // AI Chat Widget
-        AIChatWidget(voiceManager)
+        // AI Companion Chat Widget
+        AIChatWidget(voiceManager = voiceManager)
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+
+    // All Medications Dialog
+    if (showAllMedsDialog) {
+        val meds = (vm.medicines as? ApiResult.Success)?.data ?: emptyList()
+        AlertDialog(
+            onDismissRequest = { showAllMedsDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Filled.Medication, contentDescription = null, tint = Color(0xFF2563EB))
+                    Text("All Scheduled Medications")
+                }
+            },
+            text = {
+                if (meds.isEmpty()) {
+                    Text("No medications scheduled.", color = Color.Gray)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        meds.forEach { m ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text("${m.name} — ${m.dosage}", fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                                    Text("🕒 ${m.scheduleTime}", fontSize = 13.sp, color = Color(0xFF2563EB))
+                                    if (m.instructions.isNotBlank()) {
+                                        Text("📝 ${m.instructions}", fontSize = 12.sp, color = Color(0xFF64748B))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAllMedsDialog = false }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
+    // Person Profile Dialog
+    selectedPerson?.let { person ->
+        AlertDialog(
+            onDismissRequest = { selectedPerson = null },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(person.name, fontWeight = FontWeight.Bold)
+                    Text("(${person.relationship})", color = Color(0xFF10B981), fontSize = 14.sp)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (person.photoUrls.isNotEmpty()) {
+                        AsyncImage(
+                            model = RetrofitClient.currentBaseUrl().trimEnd('/') + person.photoUrls.first(),
+                            contentDescription = person.name,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                    if (person.memories.isNotEmpty()) {
+                        Text("Shared Memories:", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        person.memories.forEach { mem ->
+                            Text("• $mem", fontSize = 13.sp, color = Color(0xFF475569))
+                        }
+                    }
+                    if (person.favoriteSongs.isNotEmpty()) {
+                        Text("Favorite Songs: ${person.favoriteSongs.joinToString(", ")}", fontSize = 13.sp, color = Color(0xFF64748B))
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val query = "Tell me about ${person.name}"
+                    voiceManager.sendTextQuery(query, object : VoiceConversationManager.Callback {})
+                    selectedPerson = null
+                    coroutineScope.launch {
+                        scrollState.animateScrollTo(scrollState.maxValue)
+                    }
+                }) {
+                    Text("Ask Companion About ${person.name.split(" ").first()}")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { selectedPerson = null }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+}
+
+private fun dialPhone(context: Context, phone: String) {
+    try {
+        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Calling $phone", Toast.LENGTH_SHORT).show()
     }
 }
 
 @Composable
-fun GreetingBanner(vm: CaregiverViewModel) {
+fun GreetingBanner(
+    vm: CaregiverViewModel,
+    onTalkClick: () -> Unit,
+    onMemoriesClick: () -> Unit
+) {
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val greeting = when {
         hour < 12 -> "Good Morning"
         hour < 17 -> "Good Afternoon"
         else -> "Good Evening"
     }
-    
-    val peopleRes = vm.people
-    val firstName = if (peopleRes is ApiResult.Success && peopleRes.data.isNotEmpty()) {
-        "there" // In a real app we'd have the patient's own profile, but for now fallback
-    } else {
-        "there"
-    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2563EB)),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("🌞", fontSize = 28.sp)
                 Text(
-                    text = "$greeting, $firstName",
+                    text = "$greeting!",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -129,30 +302,35 @@ fun GreetingBanner(vm: CaregiverViewModel) {
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Today is a peaceful day. Talk to NeuroTwin anytime you want.",
+                text = "Today is a peaceful day. NeuroTwin is with you and keeping watch.",
                 fontSize = 15.sp,
-                color = Color.White.copy(alpha = 0.9f),
+                color = Color.White.copy(alpha = 0.95f),
                 lineHeight = 22.sp
             )
             Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Button(
-                    onClick = { /* Scroll to chat */ },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.15f)),
-                    shape = RoundedCornerShape(12.dp)
+                    onClick = onTalkClick,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(Icons.Filled.PsychologyAlt, contentDescription = null, tint = Color.White)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Talk to NeuroTwin", color = Color.White)
+                    Icon(Icons.Filled.Psychology, contentDescription = null, tint = Color.White)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Talk to Twin", color = Color.White, fontWeight = FontWeight.Bold)
                 }
                 Button(
-                    onClick = { /* Open memories view */ },
+                    onClick = onMemoriesClick,
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Filled.PhotoLibrary, contentDescription = null, tint = Color(0xFF2563EB))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Open Memories", color = Color(0xFF2563EB))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Memories", color = Color(0xFF2563EB), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -160,7 +338,10 @@ fun GreetingBanner(vm: CaregiverViewModel) {
 }
 
 @Composable
-fun MedicationsSection(vm: CaregiverViewModel) {
+fun MedicationsSection(
+    vm: CaregiverViewModel,
+    onViewAllClick: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -175,31 +356,52 @@ fun MedicationsSection(vm: CaregiverViewModel) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Filled.Medication, contentDescription = null, tint = Color(0xFF2563EB))
-                    Text("Today's Medications", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2563EB))
+                    Text("Today's Medications", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
                 }
-                Text("View All →", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                TextButton(onClick = onViewAllClick) {
+                    Text("View All →", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             when (val r = vm.medicines) {
-                null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                is ApiResult.Failure -> Text("Error loading meds", color = Color.Red)
+                null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp))
+                is ApiResult.Failure -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Unable to load medications", color = Color(0xFFDC2626), fontSize = 13.sp)
+                        TextButton(onClick = { vm.refreshMedicines() }) {
+                            Text("Retry", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
                 is ApiResult.Success -> {
                     if (r.data.isEmpty()) {
-                        Text("No medications scheduled.", color = Color.Gray, modifier = Modifier.padding(vertical = 16.dp))
+                        Text("No medications scheduled for today.", color = Color.Gray, modifier = Modifier.padding(vertical = 12.dp))
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             r.data.take(3).forEach { m ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
+                                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
                                         .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Filled.Schedule, contentDescription = null, tint = Color(0xFF2563EB))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFEFF6FF)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Filled.Schedule, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(20.dp))
+                                    }
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text("${m.name} — ${m.dosage}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B))
                                         Text(m.scheduleTime, fontSize = 12.sp, color = Color(0xFF64748B))
                                     }
@@ -214,7 +416,10 @@ fun MedicationsSection(vm: CaregiverViewModel) {
 }
 
 @Composable
-fun FamilySection(vm: CaregiverViewModel) {
+fun FamilySection(
+    vm: CaregiverViewModel,
+    onPersonClick: (Person) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -222,50 +427,98 @@ fun FamilySection(vm: CaregiverViewModel) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Filled.FamilyRestroom, contentDescription = null, tint = Color(0xFF2563EB))
-                Text("Family & Friends", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2563EB))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Filled.FamilyRestroom, contentDescription = null, tint = Color(0xFF2563EB))
+                    Text("Family & Friends", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                }
+                if (vm.people is ApiResult.Failure) {
+                    TextButton(onClick = { vm.refreshPeople() }) {
+                        Text("Retry", fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(12.dp))
 
             when (val r = vm.people) {
-                null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                is ApiResult.Failure -> Text("Error loading family", color = Color.Red)
+                null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp))
+                is ApiResult.Failure -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Could not connect to Family service", color = Color(0xFFDC2626), fontSize = 13.sp)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Button(
+                            onClick = { vm.refreshPeople() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                        ) {
+                            Text("Reconnect Family")
+                        }
+                    }
+                }
                 is ApiResult.Success -> {
                     if (r.data.isEmpty()) {
-                        Text("Your loved ones will appear here.", color = Color.Gray)
+                        Text("Your loved ones will appear here.", color = Color.Gray, modifier = Modifier.padding(vertical = 12.dp))
                     } else {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(r.data) { f ->
-                                Row(
+                                Card(
                                     modifier = Modifier
-                                        .width(160.dp)
-                                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .width(170.dp)
+                                        .clickable { onPersonClick(f) },
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFFDBEAFE)),
-                                        contentAlignment = Alignment.Center
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        if (f.photoUrls.isNotEmpty()) {
-                                            AsyncImage(
-                                                model = RetrofitClient.currentBaseUrl().trimEnd('/') + f.photoUrls.first(),
-                                                contentDescription = f.name,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier.fillMaxSize()
-                                            )
-                                        } else {
-                                            Text(f.name.take(1), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFFDBEAFE)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (f.photoUrls.isNotEmpty()) {
+                                                AsyncImage(
+                                                    model = RetrofitClient.currentBaseUrl().trimEnd('/') + f.photoUrls.first(),
+                                                    contentDescription = f.name,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = f.name.take(1),
+                                                    fontSize = 18.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF2563EB)
+                                                )
+                                            }
                                         }
-                                    }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(f.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B), maxLines = 1)
-                                        Text(f.relationship, fontSize = 12.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Medium)
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = f.name,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF1E293B),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = f.relationship,
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF10B981),
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -278,36 +531,45 @@ fun FamilySection(vm: CaregiverViewModel) {
 }
 
 @Composable
-fun FeaturedMemorySection(vm: CaregiverViewModel) {
+fun FeaturedMemorySection(
+    vm: CaregiverViewModel,
+    voiceManager: VoiceConversationManager
+) {
     val memoriesRes = vm.memories
     if (memoriesRes is ApiResult.Success && memoriesRes.data.isNotEmpty()) {
         val memory = memoriesRes.data.first()
         Card(
-            modifier = Modifier.fillMaxWidth().border(2.dp, Color(0xFFDBEAFE), RoundedCornerShape(16.dp)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(2.dp, Color(0xFFDBEAFE), RoundedCornerShape(16.dp)),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Filled.Favorite, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(16.dp))
-                    Text("FEATURED MEMORY", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFF1F5F9)),
-                    contentAlignment = Alignment.Center
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.PhotoLibrary, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(48.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Filled.Favorite, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(18.dp))
+                        Text("FEATURED MEMORY", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB), letterSpacing = 1.sp)
+                    }
+                    IconButton(onClick = {
+                        voiceManager.sendTextQuery(
+                            "Tell me about the memory: ${memory.title}",
+                            object : VoiceConversationManager.Callback {}
+                        )
+                    }) {
+                        Icon(Icons.Filled.VolumeUp, contentDescription = "Listen", tint = Color(0xFF2563EB))
+                    }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(memory.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(memory.title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
                 memory.description?.let {
-                    Text(it, fontSize = 13.sp, color = Color(0xFF64748B), maxLines = 2)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(it, fontSize = 14.sp, color = Color(0xFF475569), lineHeight = 20.sp)
                 }
             }
         }
@@ -315,10 +577,18 @@ fun FeaturedMemorySection(vm: CaregiverViewModel) {
 }
 
 @Composable
-fun SOSCard(onSosClick: () -> Unit) {
+fun SOSCard(
+    contactsResult: ApiResult<List<EmergencyContact>>?,
+    onSosTriggered: () -> Unit
+) {
+    val primaryContact = (contactsResult as? ApiResult.Success)?.data?.firstOrNull { it.isPrimary }
+        ?: (contactsResult as? ApiResult.Success)?.data?.firstOrNull()
+
     Card(
-        modifier = Modifier.fillMaxWidth().border(2.dp, Color(0xFFEF4444), RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFEE2E2)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(2.dp, Color(0xFFEF4444), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
@@ -327,18 +597,32 @@ fun SOSCard(onSosClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Filled.Sos, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(32.dp))
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFEE2E2)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.Sos, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(28.dp))
+                }
                 Column {
                     Text("Need Immediate Help?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF991B1B))
-                    Text("Tap to alert your care team", fontSize = 12.sp, color = Color(0xFFEF4444))
+                    Text(
+                        text = if (primaryContact != null) "Call ${primaryContact.name} (${primaryContact.relationship})" else "Tap to alert your care team",
+                        fontSize = 12.sp,
+                        color = Color(0xFFEF4444)
+                    )
                 }
             }
             Button(
-                onClick = onSosClick,
+                onClick = onSosTriggered,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Text("SEND SOS", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.Filled.Call, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("CALL SOS", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
         }
     }
@@ -350,21 +634,34 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
     var isSending by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
     var responseText by remember { mutableStateOf<String?>(null) }
-    var statusMessage by remember { mutableStateOf("") }
+    var activeQuery by remember { mutableStateOf<String?>(null) }
 
-    val recordButtonColor by animateColorAsState(if (isRecording) Color(0xFFEF4444) else Color(0xFF1E293B))
+    val recordButtonColor by animateColorAsState(
+        if (isRecording) Color(0xFFEF4444) else Color(0xFF2563EB)
+    )
+    val buttonScale by animateFloatAsState(if (isRecording) 1.05f else 1.0f)
     val context = LocalContext.current
 
+    val quickQuestions = listOf(
+        "Who is here?",
+        "Where are my glasses?",
+        "What medicines today?",
+        "Tell me a story"
+    )
+
     Card(
-        modifier = Modifier.fillMaxWidth().height(380.dp),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             // Header
             Row(
-                modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B)).padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF1E293B))
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -377,78 +674,149 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                 Column {
                     Text("NeuroTwin Companion", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     Text(
-                        when {
-                            isRecording -> "Listening..."
-                            isSending -> "Thinking..."
-                            isPlaying -> "Speaking..."
-                            else -> "Online & Ready"
+                        text = when {
+                            isRecording -> "🎤 Listening to your voice..."
+                            isSending -> "🧠 Thinking..."
+                            isPlaying -> "🔊 Speaking..."
+                            else -> "🟢 Online & Ready"
                         },
-                        fontSize = 13.sp, color = Color(0xFF94A3B8)
+                        fontSize = 13.sp,
+                        color = when {
+                            isRecording -> Color(0xFFFCA5A5)
+                            isSending -> Color(0xFF93C5FD)
+                            isPlaying -> Color(0xFF86EFAC)
+                            else -> Color(0xFF94A3B8)
+                        }
                     )
                 }
             }
 
-            // Chat area
-            Box(modifier = Modifier.weight(1f).fillMaxWidth().background(Color(0xFFF8FAFC)).padding(16.dp)) {
-                if (responseText != null) {
-                    // Chat bubble
-                    Box(
-                        modifier = Modifier
-                            .background(Color.White, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 0.dp))
-                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 0.dp))
-                            .padding(16.dp)
-                            .align(Alignment.BottomStart)
-                    ) {
-                        Text(responseText!!, fontSize = 15.sp, color = Color(0xFF1E293B))
-                    }
-                } else {
-                    // Welcome
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(Icons.Filled.Mic, contentDescription = null, tint = Color(0xFFCBD5E1), modifier = Modifier.size(48.dp))
-                        Spacer(Modifier.height(16.dp))
-                        Text("Hold the microphone button to ask a question", color = Color(0xFF94A3B8), textAlign = TextAlign.Center)
+            // Quick Questions Chips
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text("Quick Questions:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF64748B))
+                Spacer(modifier = Modifier.height(6.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(quickQuestions) { q ->
+                        SuggestionChip(
+                            onClick = {
+                                activeQuery = q
+                                isSending = true
+                                responseText = null
+                                voiceManager.sendTextQuery(
+                                    q,
+                                    object : VoiceConversationManager.Callback {
+                                        override fun onResponseReceived(t: String, r: String, a: String?) {
+                                            isSending = false
+                                            responseText = r
+                                        }
+                                        override fun onAudioPlaybackStarted() { isPlaying = true }
+                                        override fun onAudioPlaybackFinished() { isPlaying = false }
+                                        override fun onError(m: String) {
+                                            isSending = false
+                                            Toast.makeText(context, "Error: $m", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                )
+                            },
+                            label = { Text(q, fontSize = 12.sp, fontWeight = FontWeight.Medium) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = Color(0xFFF1F5F9),
+                                labelColor = Color(0xFF1E293B)
+                            )
+                        )
                     }
                 }
             }
 
-            // Input area
+            // Chat / Response Display Area
             Box(
-                modifier = Modifier.fillMaxWidth().background(Color.White).padding(16.dp),
-                contentAlignment = Alignment.Center
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp, max = 220.dp)
+                    .background(Color(0xFFF8FAFC))
+                    .padding(14.dp)
             ) {
+                if (responseText != null) {
+                    Column {
+                        activeQuery?.let {
+                            Text("Q: $it", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF64748B))
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                        Box(
+                            modifier = Modifier
+                                .background(Color.White, RoundedCornerShape(12.dp))
+                                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                        ) {
+                            Text(responseText!!, fontSize = 15.sp, color = Color(0xFF1E293B), lineHeight = 22.sp)
+                        }
+                    }
+                } else if (isSending) {
+                    Row(
+                        modifier = Modifier.align(Alignment.Center),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Text("Thinking...", color = Color(0xFF64748B), fontSize = 14.sp)
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Filled.Mic, contentDescription = null, tint = Color(0xFFCBD5E1), modifier = Modifier.size(36.dp))
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Tap a question above or hold the microphone button to talk",
+                            color = Color(0xFF94A3B8),
+                            textAlign = TextAlign.Center,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+
+            // Action Bar: Hold or Tap to Record
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Large Hold to Talk Button
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(28.dp))
+                        .weight(1f)
+                        .height(54.dp)
+                        .scale(buttonScale)
+                        .clip(RoundedCornerShape(27.dp))
                         .background(recordButtonColor)
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onPress = {
                                     isRecording = true
                                     responseText = null
-                                    statusMessage = "Listening..."
+                                    activeQuery = "Spoken Query"
                                     voiceManager.startConversationFromRecording(
                                         object : VoiceConversationManager.Callback {
                                             override fun onRecordingStopped() {
                                                 isRecording = false
                                                 isSending = true
-                                                statusMessage = "Thinking..."
                                             }
                                             override fun onResponseReceived(t: String, r: String, a: String?) {
                                                 isSending = false
+                                                activeQuery = t
                                                 responseText = r
-                                                statusMessage = "Response ready"
                                             }
                                             override fun onAudioPlaybackStarted() { isPlaying = true }
                                             override fun onAudioPlaybackFinished() { isPlaying = false }
                                             override fun onError(m: String) {
                                                 isRecording = false
                                                 isSending = false
-                                                Toast.makeText(context, "Error: $m", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, "Voice error: $m", Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     )
@@ -462,7 +830,25 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Filled.Mic, contentDescription = null, tint = Color.White)
-                        Text(if (isRecording) "Release to Send" else "Hold to Talk", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isRecording) "Release to Send" else "Hold to Talk",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                    }
+                }
+
+                // Stop Audio Playback Button
+                if (isPlaying) {
+                    FilledIconButton(
+                        onClick = {
+                            voiceManager.stopPlayback()
+                            isPlaying = false
+                        },
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = Color(0xFFEF4444))
+                    ) {
+                        Icon(Icons.Filled.Stop, contentDescription = "Stop", tint = Color.White)
                     }
                 }
             }
