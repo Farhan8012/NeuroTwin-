@@ -18,15 +18,16 @@ sealed interface ApiResult<out T> {
     data class Failure(val message: String) : ApiResult<Nothing>
 }
 
-suspend fun <T> Response<T>.unwrap(): ApiResult<T> = withContext(Dispatchers.IO) {
+suspend fun <T> safeApiCall(call: suspend () -> Response<T>): ApiResult<T> = withContext(Dispatchers.IO) {
     try {
-        if (isSuccessful) {
-            body()?.let { ApiResult.Success(it) }
+        val response = call()
+        if (response.isSuccessful) {
+            response.body()?.let { ApiResult.Success(it) }
                 ?: ApiResult.Failure("Empty response from server")
         } else {
-            val detail = errorBody()?.string()
+            val detail = response.errorBody()?.string()
                 ?.split("\"detail\":\"")?.getOrNull(1)?.split("\"")?.firstOrNull()
-            ApiResult.Failure(detail ?: "Server error ${code()}")
+            ApiResult.Failure(detail ?: "Server error ${response.code()}")
         }
     } catch (e: IOException) {
         ApiResult.Failure(
@@ -44,65 +45,61 @@ class NeuroTwinRepository(private val context: Context) {
     private val api get() = RetrofitClient.api(context)
 
     // ── System ──
-    suspend fun health(): ApiResult<HealthStatus> = api.health().unwrap()
+    suspend fun health(): ApiResult<HealthStatus> = safeApiCall { api.health() }
 
     // ── People ──
-    suspend fun people(): ApiResult<List<Person>> = api.listPeople().unwrap()
+    suspend fun people(): ApiResult<List<Person>> = safeApiCall { api.listPeople() }
 
     suspend fun createPerson(name: String, relationship: String, birthday: String?) =
-        api.createPerson(PersonRequest(name, relationship, birthday)).unwrap()
+        safeApiCall { api.createPerson(PersonRequest(name, relationship, birthday)) }
 
     suspend fun createPersonWithPhoto(
         name: String, relationship: String, birthday: String?, photo: File,
-    ): ApiResult<Person> = withContext(Dispatchers.IO) {
-        try {
-            val part = MultipartBody.Part.createFormData(
-                "photos", photo.name,
-                photo.asRequestBody("image/jpeg".toMediaType()),
-            )
-            api.createPersonWithPhoto(
-                name.toRequestBody("text/plain".toMediaType()),
-                relationship.toRequestBody("text/plain".toMediaType()),
-                birthday?.takeIf { it.isNotBlank() }
-                    ?.toRequestBody("text/plain".toMediaType()),
-                listOf(part),
-            ).unwrap()
-        } catch (e: Exception) {
-            ApiResult.Failure(e.message ?: "Upload failed")
-        }
+    ): ApiResult<Person> = safeApiCall {
+        val part = MultipartBody.Part.createFormData(
+            "photos", photo.name,
+            photo.asRequestBody("image/jpeg".toMediaType()),
+        )
+        api.createPersonWithPhoto(
+            name.toRequestBody("text/plain".toMediaType()),
+            relationship.toRequestBody("text/plain".toMediaType()),
+            birthday?.takeIf { it.isNotBlank() }
+                ?.toRequestBody("text/plain".toMediaType()),
+            listOf(part),
+        )
     }
 
-    suspend fun deletePerson(id: String): ApiResult<Unit> = api.deletePerson(id).unwrap()
+    suspend fun deletePerson(id: String): ApiResult<Unit> = safeApiCall { api.deletePerson(id) }
 
     // ── Memories ──
-    suspend fun memories(): ApiResult<List<Memory>> = api.listMemories().unwrap()
+    suspend fun memories(): ApiResult<List<Memory>> = safeApiCall { api.listMemories() }
 
     suspend fun createMemory(title: String, description: String?, category: String) =
-        api.createMemory(MemoryRequest(title, description, category)).unwrap()
+        safeApiCall { api.createMemory(MemoryRequest(title, description, category)) }
 
-    suspend fun deleteMemory(id: String): ApiResult<Unit> = api.deleteMemory(id).unwrap()
+    suspend fun deleteMemory(id: String): ApiResult<Unit> = safeApiCall { api.deleteMemory(id) }
 
     // ── Medicines ──
-    suspend fun medicines(): ApiResult<List<Medicine>> = api.listMedicines().unwrap()
+    suspend fun medicines(): ApiResult<List<Medicine>> = safeApiCall { api.listMedicines() }
 
     suspend fun saveMedicine(m: Medicine): ApiResult<Medicine> =
-        if (m.id.isBlank()) api.createMedicine(m).unwrap()
-        else api.updateMedicine(m.id, m).unwrap()
+        if (m.id.isBlank()) safeApiCall { api.createMedicine(m) }
+        else safeApiCall { api.updateMedicine(m.id, m) }
 
-    suspend fun deleteMedicine(id: String): ApiResult<Unit> = api.deleteMedicine(id).unwrap()
+    suspend fun deleteMedicine(id: String): ApiResult<Unit> = safeApiCall { api.deleteMedicine(id) }
 
     // ── Emergency contacts ──
     suspend fun contacts(): ApiResult<List<EmergencyContact>> =
-        api.listEmergencyContacts().unwrap()
+        safeApiCall { api.listEmergencyContacts() }
 
     suspend fun saveContact(c: EmergencyContact): ApiResult<EmergencyContact> =
-        if (c.id.isBlank()) api.createEmergencyContact(c).unwrap()
-        else api.updateEmergencyContact(c.id, c).unwrap()
+        if (c.id.isBlank()) safeApiCall { api.createEmergencyContact(c) }
+        else safeApiCall { api.updateEmergencyContact(c.id, c) }
 
     suspend fun deleteContact(id: String): ApiResult<Unit> =
-        api.deleteEmergencyContact(id).unwrap()
+        safeApiCall { api.deleteEmergencyContact(id) }
 
     // ── Companion chat ──
     suspend fun ask(query: String): ApiResult<com.neurotwin.app.network.VoiceResponse> =
-        api.sendVoiceQuery(com.neurotwin.app.network.VoiceRequest(query)).unwrap()
+        safeApiCall { api.sendVoiceQuery(com.neurotwin.app.network.VoiceRequest(query)) }
 }

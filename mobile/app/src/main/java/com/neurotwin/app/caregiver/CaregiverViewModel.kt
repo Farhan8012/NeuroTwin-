@@ -26,36 +26,51 @@ class CaregiverViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshAll() {
         viewModelScope.launch {
-            health = async { repo.health() }.await().also { revision++ }
-            people = async { repo.people() }.await()
-            memories = async { repo.memories() }.await()
-            medicines = async { repo.medicines() }.await()
-            contacts = async { repo.contacts() }.await()
-            revision++
+            try {
+                val h = async { repo.health() }
+                val p = async { repo.people() }
+                val m = async { repo.memories() }
+                val med = async { repo.medicines() }
+                val c = async { repo.contacts() }
+
+                health = h.await()
+                people = p.await()
+                memories = m.await()
+                medicines = med.await()
+                contacts = c.await()
+            } catch (e: Exception) {
+                health = ApiResult.Failure(e.message ?: "Connection error")
+            } finally {
+                revision++
+            }
         }
     }
 
     fun refreshPeople() {
         viewModelScope.launch {
-            people = repo.people(); revision++
+            try { people = repo.people() } catch (e: Exception) { people = ApiResult.Failure(e.message ?: "Error") }
+            revision++
         }
     }
 
     fun refreshMemories() {
         viewModelScope.launch {
-            memories = repo.memories(); revision++
+            try { memories = repo.memories() } catch (e: Exception) { memories = ApiResult.Failure(e.message ?: "Error") }
+            revision++
         }
     }
 
     fun refreshMedicines() {
         viewModelScope.launch {
-            medicines = repo.medicines(); revision++
+            try { medicines = repo.medicines() } catch (e: Exception) { medicines = ApiResult.Failure(e.message ?: "Error") }
+            revision++
         }
     }
 
     fun refreshContacts() {
         viewModelScope.launch {
-            contacts = repo.contacts(); revision++
+            try { contacts = repo.contacts() } catch (e: Exception) { contacts = ApiResult.Failure(e.message ?: "Error") }
+            revision++
         }
     }
 
