@@ -46,8 +46,24 @@ import com.neurotwin.app.data.Memory
 import com.neurotwin.app.data.Person
 import com.neurotwin.app.network.RetrofitClient
 import com.neurotwin.app.service.VoiceConversationManager
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayOutputStream
 import java.util.Calendar
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -158,6 +174,9 @@ fun SeniorPatientMainScreen(
                 }
             }
         )
+
+        // Live Camera Vision Section
+        LiveCameraVisionSection()
 
         // AI Companion Chat Widget
         AIChatWidget(voiceManager = voiceManager)
@@ -815,8 +834,7 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                                             override fun onAudioPlaybackFinished() { isPlaying = false }
                                             override fun onError(m: String) {
                                                 isRecording = false
-                                                isSending = false
-                                                Toast.makeText(context, "Voice error: $m", Toast.LENGTH_SHORT).show()
+                                                                         Toast.makeText(context, "Voice error: $m", Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     )
@@ -850,6 +868,184 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                     ) {
                         Icon(Icons.Filled.Stop, contentDescription = "Stop", tint = Color.White)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LiveCameraVisionSection() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var isCameraExpanded by remember { mutableStateOf(true) }
+    var recognizedPersonName by remember { mutableStateOf<String?>(null) }
+    var recognizedRelation by remember { mutableStateOf<String?>(null) }
+    var isUploading by remember { mutableStateOf(false) }
+    var cameraFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
+    val isProcessing = remember { AtomicBoolean(false) }
+    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    var frameCount by remember { mutableIntStateOf(0) }
+    var lastUploadTime by remember { mutableLongStateOf(0L) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(2.dp, Color(0xFF10B981).copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF10B981))
+                    )
+                    Text(
+                        text = "AI CAMERA VISION",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF10B981),
+                        letterSpacing = 1.sp
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(
+                        onClick = {
+                            cameraFacing = if (cameraFacing == CameraSelector.LENS_FACING_BACK) {
+                                CameraSelector.LENS_FACING_FRONT
+                            } else {
+                                CameraSelector.LENS_FACING_BACK
+                            }
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(Icons.Filled.Cameraswitch, contentDescription = "Flip Camera", tint = Color(0xFF475569), modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(
+                        onClick = { isCameraExpanded = !isCameraExpanded },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            if (isCameraExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = "Toggle Preview",
+                            tint = Color(0xFF475569),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Recognition Status Banner
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFF1F5F9))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text("👁️", fontSize = 14.sp)
+                Text(
+                    text = if (recognizedPersonName != null) {
+                        "Seeing: $recognizedPersonName ($recognizedRelation)"
+                    } else if (isUploading) {
+                        "Analyzing live visual stream..."
+                    } else {
+                        "Camera connected to AI model • Ready"
+                    },
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (recognizedPersonName != null) Color(0xFF047857) else Color(0xFF475569)
+                )
+            }
+
+            if (isCameraExpanded) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black)
+                ) {
+                    AndroidView(
+                        factory = { ctx ->
+                            val previewView = PreviewView(ctx)
+                            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                            cameraProviderFuture.addListener({
+                                try {
+                                    val cameraProvider = cameraProviderFuture.get()
+                                    val preview = Preview.Builder().build().also {
+                                        it.setSurfaceProvider(previewView.surfaceProvider)
+                                    }
+                                    val imageAnalysis = ImageAnalysis.Builder()
+                                        .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                                        .build()
+
+                                    imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                                        val now = System.currentTimeMillis()
+                                        if (now - lastUploadTime > 2500L && isProcessing.compareAndSet(false, true)) {
+                                            lastUploadTime = now
+                                            isUploading = true
+                                            try {
+                                                val bitmap = imageProxy.toBitmap()
+                                                imageProxy.close()
+                                                val stream = ByteArrayOutputStream()
+                                                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 70, stream)
+                                                val jpegBytes = stream.toByteArray()
+                                                val requestFile = jpegBytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
+                                                val part = MultipartBody.Part.createFormData("file", "frame_${frameCount++}.jpg", requestFile)
+
+                                                kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                                                    try {
+                                                        val res = RetrofitClient.instance.uploadFrame(part)
+                                                        if (res.isSuccessful && res.body()?.matched == true) {
+                                                            val p = res.body()?.person
+                                                            recognizedPersonName = p?.get("name") as? String
+                                                            recognizedRelation = p?.get("relationship") as? String
+                                                        }
+                                                    } catch (_: Exception) {
+                                                    } finally {
+                                                        isUploading = false
+                                                        isProcessing.set(false)
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                imageProxy.close()
+                                                isProcessing.set(false)
+                                                isUploading = false
+                                            }
+                                        } else {
+                                            imageProxy.close()
+                                        }
+                                    }
+
+                                    val selector = CameraSelector.Builder()
+                                        .requireLensFacing(cameraFacing)
+                                        .build()
+
+                                    cameraProvider.unbindAll()
+                                    cameraProvider.bindToLifecycle(lifecycleOwner, selector, preview, imageAnalysis)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("CameraVision", "Camera bind failed", e)
+                                }
+                            }, ContextCompat.getMainExecutor(ctx))
+                            previewView
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
