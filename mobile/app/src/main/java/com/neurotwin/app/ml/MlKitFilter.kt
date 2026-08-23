@@ -1,6 +1,6 @@
 package com.neurotwin.app.ml
 
-import androidx.camera.core.ImageProxy
+import android.graphics.Bitmap
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceDetectorOptions
@@ -14,31 +14,35 @@ class MlKitFilter {
         .build()
 
     private val faceDetector = FaceDetection.getClient(detectorOptions)
+    private var lastPeriodicUpload = 0L
 
-    @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
-    fun processFrame(
-        imageProxy: ImageProxy,
-        onGateResult: (shouldUpload: Boolean, faceCount: Int) -> Unit
+    fun processBitmap(
+        bitmap: Bitmap,
+        onGateResult: (shouldUpload: Boolean) -> Unit
     ) {
-        val mediaImage = imageProxy.image
-        if (mediaImage == null) {
-            imageProxy.close()
-            onGateResult(false, 0)
-            return
-        }
+        val now = System.currentTimeMillis()
+        // Periodic background upload every 5 seconds even without a front face (for object/scene context)
+        val isPeriodicTime = (now - lastPeriodicUpload) > 5000L
 
-        val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-        
+        val inputImage = InputImage.fromBitmap(bitmap, 0)
+
         faceDetector.process(inputImage)
             .addOnSuccessListener { faces ->
                 val hasFace = faces.isNotEmpty()
-                onGateResult(hasFace, faces.size)
+                if (hasFace || isPeriodicTime) {
+                    lastPeriodicUpload = now
+                    onGateResult(true)
+                } else {
+                    onGateResult(false)
+                }
             }
             .addOnFailureListener {
-                onGateResult(false, 0)
-            }
-            .addOnCompleteListener {
-                imageProxy.close()
+                if (isPeriodicTime) {
+                    lastPeriodicUpload = now
+                    onGateResult(true)
+                } else {
+                    onGateResult(false)
+                }
             }
     }
 }

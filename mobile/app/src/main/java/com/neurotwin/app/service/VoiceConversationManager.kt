@@ -71,10 +71,10 @@ class VoiceConversationManager(private val context: Context) {
             // Warm companion fallback
             val q = query.lowercase()
             val fallbackText = when {
-                q.contains("who") || q.contains("sarah") || q.contains("robert") -> "This is your daughter Sarah Varma. She visited you yesterday afternoon and brought your favorite blueberry muffins."
-                q.contains("glass") -> "Your reading glasses are right on the living room table next to your book."
-                q.contains("sunshine") -> "Playing your favorite song: You Are My Sunshine."
-                else -> "I am right here with you. Your daughter Sarah is here and everything is safe and sound."
+                q.contains("who") -> "I am right here keeping watch with you. Your loved ones are always keeping you in their thoughts."
+                q.contains("glass") -> "Your reading glasses are resting on the table next to your chair."
+                q.contains("medicine") || q.contains("medication") -> "Your daily medications are safely scheduled by your care team."
+                else -> "I am right here with you, keeping you safe and sound."
             }
             runOnMain {
                 callback.onResponseReceived(query, fallbackText, null)

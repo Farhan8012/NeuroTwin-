@@ -203,52 +203,45 @@ class CameraForegroundService : Service(), LifecycleOwner {
 
     @androidx.annotation.OptIn(ExperimentalGetImage::class)
     private fun processFrame(imageProxy: ImageProxy) {
-        // Rate-limit: skip if previous frame is still being processed
         if (!isProcessing.compareAndSet(false, true)) {
             imageProxy.close()
             return
         }
 
-        mlKitFilter.processFrame(imageProxy) { shouldUpload, faceCount ->
-            if (shouldUpload && faceCount > 0) {
-                uploadFrame(imageProxy)
-            } else {
-                isProcessing.set(false)
-                // Don't close here — MlKitFilter already closes on complete
+        try {
+            val bitmap = imageProxy.toBitmap()
+            imageProxy.close()
+
+            mlKitFilter.processBitmap(bitmap) { shouldUpload ->
+                if (shouldUpload) {
+                    uploadBitmap(bitmap)
+                } else {
+                    isProcessing.set(false)
+                }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Frame conversion error", e)
+            try { imageProxy.close() } catch (_: Exception) {}
+            isProcessing.set(false)
         }
     }
 
-    private fun uploadFrame(imageProxy: ImageProxy) {
+    private fun uploadBitmap(bitmap: android.graphics.Bitmap) {
         try {
-            val mediaImage = imageProxy.image
-            if (mediaImage == null) {
-                isProcessing.set(false)
-                imageProxy.close()
-                return
-            }
-
-            val buffer = imageProxy.planes[0].buffer
-            val bytes = ByteArray(buffer.remaining())
-            buffer.get(bytes)
-
-            // Convert to JPEG
-            val bitmap = imageProxy.toBitmap()
             val stream = ByteArrayOutputStream()
-            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, stream)
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 75, stream)
             val jpegBytes = stream.toByteArray()
 
             val requestFile = jpegBytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
             val framePart = MultipartBody.Part.createFormData("file", "frame_${frameCount++}.jpg", requestFile)
 
-            // Fire-and-forget upload (don't block camera pipeline)
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val response = RetrofitClient.instance.uploadFrame(framePart)
                     if (response.isSuccessful) {
                         val body = response.body()
                         if (body?.matched == true) {
-                            Log.i(TAG, "Matched person: ${body.person?.get("name")} (score: ${body.confidence})")
+                            Log.i(TAG, "Camera recognized: ${body.person?.get("name")} (confidence: ${body.confidence})")
                             broadcastRecognition(body)
                         }
                     }
@@ -259,10 +252,8 @@ class CameraForegroundService : Service(), LifecycleOwner {
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Frame processing error", e)
+            Log.e(TAG, "Frame upload prep error", e)
             isProcessing.set(false)
-        } finally {
-            imageProxy.close()
         }
     }
 
