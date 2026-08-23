@@ -23,7 +23,7 @@ def _qdrant_status() -> str:
 
 async def _llm_status() -> str:
     if settings.LLM_PROVIDER == "groq" and settings.GROQ_API_KEY:
-        return "active (Groq Cloud llama-3.3-70b)"
+        return "active (Groq Cloud GPT-OSS-120B)"
     try:
         async with httpx.AsyncClient(timeout=0.5) as client:
             resp = await client.get(f"{settings.OLLAMA_BASE_URL}/api/tags")
