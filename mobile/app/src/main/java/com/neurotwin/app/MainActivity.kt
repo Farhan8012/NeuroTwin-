@@ -24,6 +24,7 @@ import com.neurotwin.app.caregiver.CaregiverApp
 import com.neurotwin.app.network.RetrofitClient
 import com.neurotwin.app.service.BLEScannerService
 import com.neurotwin.app.service.CameraForegroundService
+import com.neurotwin.app.service.ServiceRestartWorker
 import com.neurotwin.app.service.VoiceConversationManager
 import com.neurotwin.app.ui.screens.ModeSelectScreen
 import com.neurotwin.app.ui.theme.NeuroTwinTheme
@@ -79,7 +80,11 @@ class MainActivity : ComponentActivity() {
                     val mode = AuthState.session.collectAsState().value.mode
                     when (mode) {
                         null -> ModeSelectScreen()
-                        Mode.CAREGIVER -> CaregiverApp()
+                        Mode.CAREGIVER -> {
+                            // Cancel watchdog — no services needed in caregiver mode
+                            ServiceRestartWorker.cancel(this@MainActivity)
+                            CaregiverApp()
+                        }
                         Mode.PATIENT -> {
                             ensurePermissions()
                             SeniorPatientMainScreen(voiceManager)
@@ -120,6 +125,8 @@ class MainActivity : ComponentActivity() {
 
     private fun startPatientServices() {
         if (AuthState.session.value.mode != Mode.PATIENT) return
+
+        // Start foreground services
         val cameraIntent = Intent(this, CameraForegroundService::class.java)
         val bleIntent = Intent(this, BLEScannerService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -129,5 +136,9 @@ class MainActivity : ComponentActivity() {
             startService(cameraIntent)
             startService(bleIntent)
         }
+
+        // Schedule WorkManager watchdog to restart services if OS kills them
+        ServiceRestartWorker.schedule(this)
     }
 }
+

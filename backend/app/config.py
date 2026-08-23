@@ -10,9 +10,11 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     BASE_DIR: Path = BASE_DIR
 
-    # Qdrant Vector Database
+    # Qdrant Vector Database (Cloud or Local)
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
+    QDRANT_URL: str = ""           # Set for Qdrant Cloud (e.g., https://xyz.aws.cloud.qdrant.io:6333)
+    QDRANT_API_KEY: str = ""       # Set for Qdrant Cloud auth
     QDRANT_COLLECTION_PEOPLE: str = "people"
     QDRANT_COLLECTION_OBJECTS: str = "objects"
     QDRANT_FACE_DIM: int = 512
@@ -20,11 +22,14 @@ class Settings(BaseSettings):
     # AI Engine Thresholds
     FACE_MATCH_THRESHOLD: float = 0.50
 
-    # LLM Engine ('ollama' or 'groq')
-    LLM_PROVIDER: str = "ollama"
+    # LLM Engine ('groq' or 'ollama')
+    LLM_PROVIDER: str = "groq"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "qwen3:8b"
     GROQ_API_KEY: str = ""
+
+    # STT Engine ('groq' or 'local')
+    STT_PROVIDER: str = "groq"
 
     # Model paths (bundled locally on the M4 host)
     MODELS_DIR: Path = BASE_DIR / "models"

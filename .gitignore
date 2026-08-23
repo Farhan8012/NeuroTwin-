@@ -40,3 +40,4 @@ mobile/app/build/
 mobile/local.properties
 mobile/gradle.properties
 mobile/.idea/
+*.hprof

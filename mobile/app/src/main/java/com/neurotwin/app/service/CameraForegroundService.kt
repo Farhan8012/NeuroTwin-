@@ -5,8 +5,11 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -23,6 +26,8 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
+import java.util.Timer
+import java.util.TimerTask
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
@@ -33,6 +38,12 @@ class CameraForegroundService : Service(), LifecycleOwner {
     private lateinit var mlKitFilter: MlKitFilter
     private val isProcessing = AtomicBoolean(false)
     private var frameCount = 0
+
+    // Wake lock to prevent CPU sleep during continuous frame gating
+    private var wakeLock: PowerManager.WakeLock? = null
+
+    // Battery/thermal telemetry timer
+    private var telemetryTimer: Timer? = null
 
     // Simple LifecycleOwner implementation for CameraX
     private val lifecycleRegistry = androidx.lifecycle.LifecycleRegistry(this).apply {
@@ -51,10 +62,20 @@ class CameraForegroundService : Service(), LifecycleOwner {
         cameraExecutor = Executors.newSingleThreadExecutor()
         mlKitFilter = MlKitFilter()
 
+        // Acquire partial wake lock so CPU stays active for frame processing
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "neurotwin:camera_service_wakelock"
+        ).apply {
+            acquire(4 * 60 * 60 * 1000L) // 4-hour max timeout
+        }
+
         lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.STARTED
         lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.RESUMED
 
         startCamera()
+        startTelemetryLogging()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -64,10 +85,86 @@ class CameraForegroundService : Service(), LifecycleOwner {
     override fun onDestroy() {
         lifecycleRegistry.currentState = androidx.lifecycle.Lifecycle.State.DESTROYED
         cameraExecutor.shutdown()
+        stopTelemetryLogging()
+        wakeLock?.let {
+            if (it.isHeld) it.release()
+        }
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    // ─── Battery & Thermal Telemetry ────────────────────────────
+
+    /**
+     * Logs battery level, temperature, and thermal throttle status every 60 seconds.
+     * This data is critical for benchmarking multi-hour continuous operation
+     * and identifying thermal throttling on various Android devices.
+     */
+    private fun startTelemetryLogging() {
+        telemetryTimer = Timer("TelemetryTimer", true).apply {
+            scheduleAtFixedRate(object : TimerTask() {
+                override fun run() {
+                    logBatteryTelemetry()
+                }
+            }, 0L, TELEMETRY_INTERVAL_MS)
+        }
+    }
+
+    private fun stopTelemetryLogging() {
+        telemetryTimer?.cancel()
+        telemetryTimer = null
+    }
+
+    private fun logBatteryTelemetry() {
+        try {
+            // Battery status
+            val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+            val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
+            val batteryPct = if (scale > 0) (level * 100 / scale) else -1
+
+            // Battery temperature (in tenths of a degree Celsius)
+            val tempRaw = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1
+            val tempC = if (tempRaw > 0) tempRaw / 10.0 else -1.0
+
+            // Charging state
+            val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) ?: -1
+            val isCharging = plugged != 0
+
+            // Thermal status (API 29+)
+            val thermalStatus = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val pm = getSystemService(POWER_SERVICE) as PowerManager
+                when (pm.currentThermalStatus) {
+                    PowerManager.THERMAL_STATUS_NONE -> "NONE"
+                    PowerManager.THERMAL_STATUS_LIGHT -> "LIGHT"
+                    PowerManager.THERMAL_STATUS_MODERATE -> "MODERATE"
+                    PowerManager.THERMAL_STATUS_SEVERE -> "SEVERE"
+                    PowerManager.THERMAL_STATUS_CRITICAL -> "CRITICAL"
+                    PowerManager.THERMAL_STATUS_EMERGENCY -> "EMERGENCY"
+                    PowerManager.THERMAL_STATUS_SHUTDOWN -> "SHUTDOWN"
+                    else -> "UNKNOWN"
+                }
+            } else {
+                "N/A"
+            }
+
+            Log.i(
+                TAG,
+                "TELEMETRY | battery=$batteryPct% | temp=${tempC}°C | thermal=$thermalStatus | " +
+                "charging=$isCharging | frames=$frameCount"
+            )
+
+            // Warn if device is getting hot
+            if (tempC > 40.0) {
+                Log.w(TAG, "⚠️ Battery temperature above 40°C ($tempC°C) — consider reducing frame rate")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Telemetry logging failed: ${e.message}")
+        }
+    }
+
+    // ─── Camera Pipeline ────────────────────────────────────────
 
     private fun startCamera() {
         val cameraProviderFuture: ListenableFuture<ProcessCameraProvider> =
@@ -179,6 +276,8 @@ class CameraForegroundService : Service(), LifecycleOwner {
         sendBroadcast(intent)
     }
 
+    // ─── Notification ───────────────────────────────────────────
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -211,5 +310,7 @@ class CameraForegroundService : Service(), LifecycleOwner {
         const val EXTRA_PERSON_NAME = "person_name"
         const val EXTRA_PERSON_RELATION = "person_relationship"
         const val EXTRA_CONFIDENCE = "confidence"
+        const val TELEMETRY_INTERVAL_MS = 60_000L  // Log every 60 seconds
     }
 }
+

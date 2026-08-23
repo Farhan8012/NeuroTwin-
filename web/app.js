@@ -67,31 +67,90 @@ function closeModal(id) {
 }
 
 // ===================== PATIENT VOICE LOOP =====================
+let webRecognition = null;
+if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  webRecognition = new SpeechRec();
+  webRecognition.continuous = false;
+  webRecognition.interimResults = false;
+  webRecognition.lang = "en-US";
+}
+
 async function askQuestion(btn) {
   const button = btn || event.currentTarget;
   const original = button.innerHTML;
-  button.innerHTML = "<span>🎙️ Listening…</span>";
+  button.innerHTML = "<span>🎙️ Listening to voice... Speak now</span>";
   button.disabled = true;
-  try {
-    const res = await fetch(`${API_BASE}/voice-query`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ patient_query: "Who is she?" }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      showVoiceResponse(data);
-      appendVoiceLog(data);
-      button.innerHTML = original;
-      button.disabled = false;
-      return;
+
+  const handleQuery = async (queryText) => {
+    button.innerHTML = "<span>🧠 Thinking...</span>";
+    try {
+      const res = await fetch(`${API_BASE}/voice-query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patient_query: queryText || "Who is she?" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showVoiceResponse(data);
+        appendVoiceLog(data);
+        speakText(data.llm_response);
+        button.innerHTML = original;
+        button.disabled = false;
+        return;
+      }
+    } catch (err) {
+      console.warn("Backend query failed:", err);
     }
-  } catch (err) {
-    console.warn("Backend offline:", err);
+
+    // Warm fallback answer
+    const fallbackAnswer = queryText && queryText.toLowerCase().includes("glass")
+      ? "Your reading glasses are right on the living room table, next to your book."
+      : "This is your daughter Sarah. She visited you yesterday afternoon and brought your favorite blueberry muffins.";
+
+    const fallbackData = {
+      transcript: queryText || "Who is this?",
+      llm_response: fallbackAnswer,
+      tts_audio_url: null,
+    };
+    showVoiceResponse(fallbackData);
+    appendVoiceLog(fallbackData);
+    speakText(fallbackAnswer);
+    button.innerHTML = original;
+    button.disabled = false;
+  };
+
+  if (webRecognition) {
+    webRecognition.onresult = (event) => {
+      const spoken = event.results[0][0].transcript;
+      handleQuery(spoken);
+    };
+    webRecognition.onerror = () => {
+      handleQuery("Who is she?");
+    };
+    webRecognition.onend = () => {
+      // recognition finished
+    };
+    try {
+      webRecognition.start();
+      return;
+    } catch (e) {
+      console.warn("Could not start speech recognition:", e);
+    }
   }
-  alert('Voice Companion Answer:\n\n"This is your daughter Sarah. She visited you yesterday afternoon and brought your favorite blueberry muffins."');
-  button.innerHTML = original;
-  button.disabled = false;
+
+  // If no speech recognition or error starting, run standard query
+  setTimeout(() => handleQuery("Who is she?"), 400);
+}
+
+function speakText(text) {
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.95;
+    utterance.pitch = 1.05;
+    window.speechSynthesis.speak(utterance);
+  }
 }
 
 function showVoiceResponse(data) {
@@ -104,7 +163,7 @@ function showVoiceResponse(data) {
   box.innerHTML = `
     <div style="font-size:14px; text-transform:uppercase; letter-spacing:.05em; color:var(--accent-gold); font-weight:700;">Voice Companion Answer</div>
     <p style="font-size:20px; color:var(--text-primary); margin:10px 0 14px;">${data.llm_response}</p>
-    ${data.tts_audio_url ? `<button class="btn-senior" style="height:56px; font-size:16px; width:100%;" onclick="playAudio('${data.tts_audio_url}')"><span class="btn-icon">🔊</span><span>Play Audio Answer</span></button>` : ""}
+    <button class="btn-senior" style="height:52px; font-size:16px; width:100%;" onclick="speakText('${data.llm_response.replace(/'/g, "\\'")}')"><span class="btn-icon">🔊</span><span>Play Audio Answer</span></button>
   `;
   hero.after(box);
 }

@@ -80,5 +80,8 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp.logging.interceptor)
 
+    // WorkManager — service restart persistence
+    implementation(libs.androidx.work.runtime.ktx)
+
     debugImplementation(libs.androidx.ui.tooling)
 }

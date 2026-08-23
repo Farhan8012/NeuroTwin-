@@ -161,3 +161,34 @@ class EmergencyContact(BaseModel):
             }]
         }
     }
+
+
+# --- Photo Album Schemas ---
+class AlbumCreate(BaseModel):
+    title: str = Field(..., description="Album title", example="Lake Tahoe Summer 1974")
+    description: Optional[str] = Field(None, description="Album description", example="Family trip to Lake Tahoe")
+    date: Optional[str] = Field(None, description="Album date (YYYY-MM-DD)", example="1974-07-15")
+    people_ids: List[str] = Field(default=[], description="IDs of people associated with this album", example=["p_102"])
+    photo_urls: List[str] = Field(default=[], description="URLs of photos in this album", example=[])
+    featured_memory_id: Optional[str] = Field(None, description="ID of the featured memory for this album", example=None)
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{
+                "title": "Lake Tahoe Summer 1974",
+                "description": "Family trip to Lake Tahoe with Sarah and Thomas",
+                "date": "1974-07-15",
+                "people_ids": [],
+                "photo_urls": [],
+            }]
+        }
+    }
+
+
+class AlbumUpdate(BaseModel):
+    title: Optional[str] = Field(None, example="Lake Tahoe Summer 1974")
+    description: Optional[str] = Field(None, example="Family trip")
+    date: Optional[str] = Field(None, example="1974-07-15")
+    people_ids: Optional[List[str]] = Field(None, example=[])
+    photo_urls: Optional[List[str]] = Field(None, example=[])
+    featured_memory_id: Optional[str] = Field(None, example=None)

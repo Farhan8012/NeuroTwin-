@@ -6,13 +6,16 @@ created: 2026-08-19
 updated: 2026-08-19
 ---
 
-# Backend (FastAPI on M4)
+# Backend (FastAPI — Cloud-First with Local M4 Fallback)
 
 ## Role as Central Orchestrator
 
-The backend serves as the core intelligence hub for NeuroTwin. Developed with **FastAPI** (Python 3.11+), it runs locally on an **Apple M4 MacBook Air**. 
+The backend serves as the core intelligence hub for NeuroTwin. Developed with **FastAPI** (Python 3.11+), it operates under a **Cloud-First, Local-Fallback** execution model:
 
-The backend is responsible for receiving filtered frames and voice snippets from the Android client, executing computer vision models, interacting with the Qdrant vector database, managing LLM context, driving Text-to-Speech synthesis, and providing CRUD endpoints for the caregiver interface.
+- **1st Priority (Cloud APIs):** Routes requests to high-speed cloud APIs (Groq Llama 3.3 70B for LLM reasoning, Groq Whisper for STT, Qdrant Cloud for vector search, Google Cloud TTS) for sub-second conversational latency.
+- **Backup Fallback (Local M4 Server):** Automatically switches to local server services (M4 MacBook Air or local server) with local Qdrant, Ollama Qwen3-8B, faster-whisper, and Piper TTS when cloud APIs are unavailable, unconfigured, or offline.
+
+The backend receives filtered frames and voice snippets from the Android client, executes embeddings, interacts with vector collections, manages conversational TTL caches, delivers audio synthesis, and provides full CRUD endpoints for the caregiver dashboard.
 
 ---
 
@@ -27,31 +30,31 @@ backend/
 │   ├── memories.json
 │   ├── medicines.json
 │   └── emergency_contacts.json
-├── static/audio/               # Piper TTS WAV output
+├── static/audio/               # Generated TTS WAV output
 ├── static/photos/              # Uploaded reference photos
-├── models/                     # Bundled AI model weights (auto-downloaded)
+├── models/                     # Bundled local fallback AI model weights
 │   ├── insightface/models/buffalo_l/
 │   ├── whisper/models/Systran--faster-whisper-base/
 │   └── piper/en_US-lessac-medium.onnx
-├── qdrant/                     # Native Qdrant binary + storage
+├── qdrant/                     # Local fallback native Qdrant binary + storage
 └── app/
     ├── __init__.py
     ├── main.py                 # FastAPI App instance, CORS, router mounting
     ├── config.py               # Pydantic BaseSettings (env-backed)
     ├── schemas.py              # Request/Response Pydantic models
     ├── services/
-    │   ├── qdrant_service.py   # Qdrant vector DB (UUID conversion, people+objects)
+    │   ├── qdrant_service.py   # Qdrant Cloud client with local Qdrant fallback
     │   ├── face_service.py     # InsightFace buffalo_l 512-d embedding (graceful fallback)
     │   ├── object_service.py   # YOLOv8-nano household object detection
     │   ├── ble_service.py      # BLE beacon RSSI triangulation for room-level tracking
-    │   ├── stt_service.py      # faster-whisper base (CPU int8) transcription
-    │   ├── llm_service.py      # Ollama Qwen3-8B / Groq Llama 3 reasoning
-    │   ├── tts_service.py      # Piper en_US-lessac-medium WAV synthesis
+    │   ├── stt_service.py      # Groq Whisper STT with local faster-whisper fallback
+    │   ├── llm_service.py      # Groq Llama 3.3 with Ollama / rule fallback
+    │   ├── tts_service.py      # Cloud TTS with Piper en_US-lessac-medium fallback
     │   ├── people_store.py     # JSON-backed person profile registry
     │   ├── context_cache.py    # In-memory TTL cache for visual context
     │   └── json_store.py       # Generic JSON CRUD store (memories, meds, contacts)
     └── routers/
-        ├── health.py           # GET /api/v1/health (real telemetry)
+        ├── health.py           # GET /api/v1/health (telemetry for cloud & local components)
         ├── frame.py            # POST /api/v1/frame (face match + YOLO objects + context cache)
         ├── voice.py            # POST /api/v1/voice-query (JSON) + /audio (multipart)
         ├── people.py           # /api/v1/people CRUD + photo→vector indexing
@@ -70,8 +73,8 @@ backend/
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/health` | System health & component telemetry | None | `{ status, components, system_metrics }` | ✅ Tested |
 | `POST` | `/api/v1/frame` | Process camera frame → face match → context cache | `multipart/form-data` | `FrameProcessResponse` | ✅ Tested |
-| `POST` | `/api/v1/voice-query` | JSON text → LLM → TTS | `VoiceQueryRequest` | `VoiceQueryResponse` | ✅ Tested |
-| `POST` | `/api/v1/voice-query/audio` | Multipart audio → Whisper STT → LLM → TTS | `audio` file | `VoiceQueryResponse` | ✅ Tested |
+| `POST` | `/api/v1/voice-query` | JSON text → Cloud/Local LLM → TTS | `VoiceQueryRequest` | `VoiceQueryResponse` | ✅ Tested |
+| `POST` | `/api/v1/voice-query/audio` | Multipart audio → Groq/Whisper STT → LLM → TTS | `audio` file | `VoiceQueryResponse` | ✅ Tested |
 | `GET/POST` | `/api/v1/people` | List/register people profiles | `PersonCreate` | `PersonResponse[]` | ✅ Tested |
 | `GET/PUT/DELETE` | `/api/v1/people/{id}` | Fetch/update/purge person + vectors | `PersonCreate` | `PersonResponse` | ✅ Tested |
 | `POST` | `/api/v1/people/with-photo` | Photo upload → InsightFace embedding → Qdrant index | `multipart/form-data` | `PersonResponse` | ✅ Tested |
@@ -97,18 +100,20 @@ backend/
 
 ---
 
-## Hardware & Resource Sharing Considerations
+## Deployment & Fallback Strategy
 
-> [!important] M4 Resource Sharing & Benchmarking
-> The backend host (Apple M4 MacBook Air) is a shared local server. It simultaneously hosts:
-> 1. FastAPI application process (`backend/`).
-> 2. Qdrant vector database container.
-> 3. Server-side vision & TTS models (InsightFace, YOLO, Piper/Kokoro, Whisper).
-> 4. **An existing local Ollama instance running Qwen3-8B** for other workloads.
+> [!important] Cloud-First Execution with Local M4 Fallback
+> 1. **Primary Cloud Mode:** When `LLM_PROVIDER=groq` and `GROQ_API_KEY` is provided, requests are handled via Groq cloud infrastructure (<1s turnaround). Vector lookups hit Qdrant Cloud if configured.
+> 2. **Local M4 Server Fallback:** If internet access fails or cloud API keys are missing:
+>    - FastAPI automatically routes LLM generation to local Ollama (`qwen3:8b`).
+>    - STT falls back to local `faster-whisper` on CPU.
+>    - TTS falls back to local `piper` ONNX model.
+>    - Vector search falls back to local Qdrant on port 6333 or in-memory mode.
 
 ---
 
 ## Related Documentation
-- [[05 - AI Pipeline]] — Server-side model details (InsightFace, Qdrant, Whisper, LLM, TTS).
+- [[02 - Architecture Overview]] — Data flow and hybrid architecture.
+- [[05 - AI Pipeline]] — Server-side model details and cloud API mappings.
 - [[06 - Data Model (Qdrant Schema)]] — Vector collection definitions and payload structures.
-- [[09 - Decisions Log]] — ADR #5 (Modular Router & Services Architecture).
+- [[09 - Decisions Log]] — ADR #10 (Hybrid Cloud-First Architecture).
