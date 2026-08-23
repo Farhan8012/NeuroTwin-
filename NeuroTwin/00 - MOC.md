@@ -8,7 +8,7 @@ updated: 2026-08-19
 
 # Map of Content (MOC) — NeuroTwin
 
-**NeuroTwin** is an AI-powered cognitive companion designed for patients with memory impairment (such as dementia), helping them recognize people and objects in their surroundings and recall relationships and shared history naturally through warm, real-time voice interactions. Powered by a native Android mobile client performing lightweight on-device pre-filtering (ML Kit) and a robust FastAPI backend on an M4 MacBook Air executing heavy AI processing (InsightFace, Qdrant vector search, Whisper STT, LLM reasoning, and Piper/Kokoro TTS), NeuroTwin restores personal context to the patient while empowering caregivers via a comprehensive management layer.
+**NeuroTwin** is an AI-powered cognitive companion designed for patients with memory impairment (such as dementia), helping them recognize people and objects in their surroundings and recall relationships and shared history naturally through warm, real-time voice interactions. Powered by a native Android mobile client performing lightweight on-device pre-filtering (ML Kit) and a high-performance, hybrid **Cloud-First FastAPI backend** (leveraging Groq Llama 3.3 / Whisper, Qdrant Cloud, and Cloud TTS for sub-second real-time responsiveness, with an automatic offline fallback to local M4 processing via Ollama, local Qdrant, and Piper TTS), NeuroTwin restores personal context to the patient while empowering caregivers via a comprehensive management layer.
 
 ---
 

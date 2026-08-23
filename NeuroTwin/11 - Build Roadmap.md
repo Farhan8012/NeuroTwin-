@@ -71,10 +71,10 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 
 ---
 
-### Phase 7: Hardening, Voice Conversation & Test Suite (Completed)
+### Phase 7: Hardening, Cloud-First Fallback & Mobile Resilience (Completed / In-Progress)
 - [x] Fix Qdrant client UUID conversion for deterministic point IDs across people/objects.
 - [x] Fix `json_store.py` ID generation bug (empty IDs from payload overriding UUIDs).
-- [x] Increase Ollama LLM timeout from 5s to 30s for 8B model inference.
+- [x] Integrate Groq Cloud API (`llama-3.3-70b-versatile`) with automatic Ollama / rule fallback chain.
 - [x] Add visual context cache integration into voice query pipeline for conversational continuity.
 - [x] Fix `health.py` bug: `qdrant_service.get_client()` → `qdrant_service.client`.
 - [x] Remove duplicate seed data from routers (memories, medicines, emergency).
@@ -83,12 +83,12 @@ The development of NeuroTwin is structured into seven sequential phases, priorit
 - [x] Complete `CameraForegroundService` with CameraX pipeline + ML Kit gating + async upload.
 - [x] Add `VoiceRecorder` (WAV 16kHz mono PCM) and `VoiceConversationManager` for full conversation loop.
 - [x] Rewrite `MainActivity` with hold-to-talk voice UI, response card, audio playback.
+- [x] Add `ServiceRestartWorker` (WorkManager) for foreground service watchdog & persistence.
+- [x] Add battery & thermal telemetry logging (60s interval) to mobile camera service.
 - [x] Create 58-test pytest suite under `backend/tests/` covering all endpoints.
 - [x] Add BLE beacon service for room-level RSSI triangulation.
-- [x] Update all Obsidian vault documentation.
-- [x] Docker Compose deployment with Qdrant + FastAPI + Nginx web dashboard.
-- [ ] Refine Android Foreground Service and WorkManager persistence across device backgrounding.
-- [ ] Benchmark thermal throttling and battery consumption on mobile client over multi-hour runs.
+- [x] Update all Obsidian vault documentation to reflect Cloud-First with Local M4 fallback.
+- [ ] Benchmark thermal throttling and battery consumption on physical mobile client over multi-hour runs.
 
 ---
 

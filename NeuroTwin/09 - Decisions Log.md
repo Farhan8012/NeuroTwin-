@@ -22,6 +22,13 @@ Future architectural decisions must follow the established format:
 
 ## Architectural Decision Records
 
+> [!decision] ADR #10: Hybrid Cloud-First Architecture with Local Fallback
+> **Date:** 2026-08-22  
+> **Alternatives considered:** Pure Local M4 server only; Pure Cloud API backend only.  
+> **Rationale:** Pure local execution on the M4 CPU resulted in high response latencies (~11–25s per conversational answer with Ollama Qwen3-8B) that broke the real-time companionship UX. Conversely, pure cloud execution lacked resilience for offline environments and posed data privacy considerations. Adopted a **Hybrid Cloud-First with Automatic Local Fallback** design:
+> 1. **Primary Route:** High-speed cloud APIs (Groq Llama 3.3 70B, Groq Whisper STT, Qdrant Cloud, Cloud TTS) provide snappy sub-second responses for patient interactions.
+> 2. **Fallback Route:** If cloud APIs fail, experience rate limits, or network connectivity drops, the backend automatically falls back to local M4 processing (Ollama, local Qdrant, faster-whisper, Piper TTS) or rule-based fallback responses.
+
 > [!decision] ADR #9: Qdrant UUID Point ID Conversion
 > **Date:** 2026-08-19  
 > **Alternatives considered:** Use string IDs directly; use integer auto-increment IDs.  

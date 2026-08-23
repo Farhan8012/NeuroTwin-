@@ -1,39 +1,49 @@
 import React from 'react'
-import { Card } from '../common/UIPrimitives'
 import { useAppState } from '../../context/AppStateContext'
 
 export function PatientPhotosView() {
-  const { memoryAlbums } = useAppState()
+  const { albums, isLoadingAlbums } = useAppState()
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto patient-mode-root">
-      <div>
-        <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">Photo Album</h2>
-        <p className="text-base text-slate-600 dark:text-slate-300 mt-1">Your treasured family albums & moments</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span className="material-symbols-outlined" style={{ color: 'var(--nt-primary)' }}>photo_library</span>
+        <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--nt-on-surface)' }}>Photo Albums</h2>
       </div>
 
-      {memoryAlbums.length === 0 ? (
-        <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700">
-          <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600 mb-4 block">photo_library</span>
-          <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-300">No Photo Albums Yet</h3>
-          <p className="text-lg text-slate-500 mt-2 max-w-md mx-auto">
-            Your family will add beautiful memories and photo albums here for you to enjoy.
-          </p>
+      {isLoadingAlbums ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          {[1,2,3,4].map(i => <div key={i} className="nt-skeleton" style={{ height: 140, borderRadius: 'var(--r-lg)' }} />)}
+        </div>
+      ) : albums.length > 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          {albums.map((a) => (
+            <div key={a.id} className="nt-card nt-card-interactive" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer' }}>
+              <div style={{
+                height: 120, background: 'var(--nt-surface-high)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {a.photo_urls && a.photo_urls.length > 0 ? (
+                  <img src={a.photo_urls[0]} alt={a.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <span className="material-symbols-outlined" style={{ fontSize: 36, color: 'var(--nt-outline-variant)' }}>photo</span>
+                )}
+              </div>
+              <div style={{ padding: '10px 12px' }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--nt-on-surface)' }}>{a.title}</div>
+                {a.date && <div style={{ fontSize: 11, color: 'var(--nt-on-surface-variant)' }}>{a.date}</div>}
+                <div style={{ fontSize: 11, color: 'var(--nt-secondary)', marginTop: 2 }}>
+                  {a.photo_urls ? a.photo_urls.length : 0} photos
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {memoryAlbums.map((p, idx) => (
-            <Card key={p.id || idx} className="p-4 space-y-3 border-2 border-slate-200 dark:border-slate-700 hover:shadow-lg transition cursor-pointer">
-              <div className="h-56 rounded-2xl overflow-hidden bg-slate-900">
-                <img src={p.image} alt={p.title} className="w-full h-full object-cover" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{p.title}</h3>
-                <p className="text-sm font-semibold text-[#2B6CB0]">{p.year}</p>
-                {p.description && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{p.description}</p>}
-              </div>
-            </Card>
-          ))}
+        <div className="nt-empty">
+          <span className="material-symbols-outlined nt-empty-icon">photo_library</span>
+          <h4 className="nt-empty-title">No photo albums yet</h4>
+          <p className="nt-empty-desc">Your caregiver will create photo albums of your special moments.</p>
         </div>
       )}
     </div>

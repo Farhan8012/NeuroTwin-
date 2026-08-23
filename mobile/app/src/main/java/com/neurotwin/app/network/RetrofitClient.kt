@@ -101,7 +101,7 @@ object RetrofitClient {
     private fun build(context: Context): NeuroTwinApi {
         val client = OkHttpClient.Builder()
             .addInterceptor(authInterceptor())
-            .connectTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(3, TimeUnit.SECONDS)
             .readTimeout(120, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
             .build()

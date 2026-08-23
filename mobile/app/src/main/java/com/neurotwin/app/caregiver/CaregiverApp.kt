@@ -27,6 +27,7 @@ private val TABS = listOf(
     Tab("telemetry", "Telemetry", Icons.Filled.Insights),
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CaregiverApp() {
     val nav = rememberNavController()
@@ -34,6 +35,18 @@ fun CaregiverApp() {
     val current = backStack?.destination?.route ?: "people"
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Caregiver Portal", style = MaterialTheme.typography.titleMedium) },
+                actions = {
+                    TextButton(
+                        onClick = { com.neurotwin.app.auth.AuthState.enter(com.neurotwin.app.auth.Mode.PATIENT) }
+                    ) {
+                        Text("👤 Patient Mode")
+                    }
+                }
+            )
+        },
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
                 TABS.forEach { tab ->

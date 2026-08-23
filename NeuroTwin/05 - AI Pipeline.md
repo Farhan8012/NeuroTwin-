@@ -10,63 +10,67 @@ updated: 2026-08-19
 
 ## Overview of Model Subsystems
 
-The NeuroTwin AI pipeline combines vision, vector retrieval, speech recognition, natural language reasoning, and speech synthesis into a cohesive cognitive support engine.
+The NeuroTwin AI pipeline combines vision, vector retrieval, speech recognition, natural language reasoning, and speech synthesis into a cohesive cognitive support engine designed around a **Cloud-First, Local-Fallback** strategy.
 
 ```
-Visual Path:  Frame ──> InsightFace/YOLO ──> Embedding ──> Qdrant Vector Match ──┐
-                                                                                 ├──> LLM Prompt ──> TTS Audio
-Voice Path:   Audio ──> Whisper STT ───────> Transcript ─────────────────────────┘
+Cloud Path (Priority 1):   Audio/Frame ──> Groq Whisper / InsightFace ──> Qdrant Cloud ──> Groq Llama 3.3 ──> Cloud TTS (<1.5s total)
+                                                                                            │ (on failure)
+Local Path (Backup M4):    Audio/Frame ──> Local Whisper / InsightFace ──> Local Qdrant ──> Ollama Qwen3-8B ──> Piper TTS (~15-25s total)
 ```
 
 ---
 
-## 1. Face Recognition Flow (✅ Tested & Passing)
+## 1. Face Recognition Flow
 
 1. **Embedding Extraction:**
    - Server receives a gated camera frame containing a face.
-   - **InsightFace `buffalo_l`** (onnxruntime CPU) normalizes alignment and crops the facial ROI, generating a 512-dimensional floating-point feature vector. Model cached in `backend/models/insightface/models/buffalo_l/`.
-   - **Test result:** Synthetic 160×160 image → 512-d embedding, unit norm (1.0000). PASS.
-2. **Vector Similarity Query:**
-   - The vector is queried against Qdrant's `people` collection using **Cosine Similarity** via `query_points()`.
-   - **Test result:** Self-match returns score 1.000 with correct payload. PASS.
+   - **InsightFace `buffalo_l`** (onnxruntime CPU) normalizes alignment and crops facial ROI, generating a 512-dimensional floating-point feature vector.
+   - Fallback: deterministic normalized pixel hash if model weights are unavailable.
+2. **Vector Similarity Query (Cosine):**
+   - **Priority 1 (Qdrant Cloud):** Queried against cloud-hosted Qdrant cluster for instant synchronization.
+   - **Backup (Local Qdrant):** Queried against native local Qdrant binary on port `6333` (or `:memory:` mode).
 3. **Thresholding & Matching:**
-   - Match criteria: `FACE_MATCH_THRESHOLD` (default `0.50`, tunable via `.env`; reference-quality photos score ~0.9+, low-res gated frames lower but stay well-separated from impostors).
+   - Match criteria: `FACE_MATCH_THRESHOLD` (default `0.50`).
    - **Above Threshold:** Returns person payload (`name`, `relationship`, `birthday`, `memories`, `family_stories`).
-   - **Below Threshold:** Categorized as "Unknown Person". Prompts system to optionally offer caregiver notification or warm generic response.
+   - **Below Threshold:** Categorized as "Unknown Person".
 
 ---
 
-## 2. Object Recognition Flow (✅ Integrated)
+## 2. Object Recognition Flow
 
-1. **YOLO Detection:**
-   - `object_service.py` runs **YOLOv8-nano** on every uploaded frame. Detects household objects: phone, remote, book, cup, bottle, scissors, chair, TV, laptop, and potted plant.
-   - Target classes are filtered to items relevant for memory-impaired patients (defined in `TARGET_CLASSES` dict).
-   - Graceful fallback: if `ultralytics` is not installed, detection returns empty list and the frame still processes for face recognition.
-2. **Embedding & Storage:**
-   - Each detected object is cropped from the frame and converted to a 128-d embedding (normalized pixel features).
-   - Objects are indexed into Qdrant's `objects` collection with `object_class`, `label`, `confidence`, and `last_seen_timestamp`.
-3. **Retrieval Strategy:**
-   - When a patient asks about an object's location, the backend fetches the most recent logged location record via `qdrant_service.latest_object_location()`.
-4. **BLE Enhancement (optional):**
-   - For higher-accuracy room-level tracking, BLE beacons can be attached to objects. See `ble_service.py` for RSSI triangulation across fixed receiver beacons.
-   - BLE data supplements visual detection — if an object has a registered beacon, its room location is updated via `POST /api/v1/ble/rssi`.
+1. **Detection:**
+   - **On-Device (Priority 1):** Android Google ML Kit Object Detection filters and categorizes household items before network transmission.
+   - **Server (Priority 2):** `object_service.py` runs **YOLOv8-nano** on uploaded frames.
+2. **Vector Indexing & Tracking:**
+   - Detected objects are logged to Qdrant's `objects` collection with timestamp, bounding box, and room location.
+3. **BLE Triangulation Enhancement:**
+   - Registered BLE beacon tags attached to physical items (glasses, keys) submit RSSI readings to `POST /api/v1/ble/rssi` for room-level triangulation.
 
 ---
 
-## 3. Voice Processing & Conversational Flow (✅ Tested & Passing)
+## 3. Voice Processing & Conversational Flow
 
-1. **Speech-to-Text (Whisper):**
-   - Spoken audio from the mobile microphone is transcribed using **faster-whisper `base`** (CPU, int8 quantization) — cached in `backend/models/whisper/`. Audio files are deleted immediately after transcription (ephemeral buffering, see [[10 - Privacy and Ethics]]).
-   - **Test result:** Model loads, processes 1s WAV, returns empty text for sine wave (expected). PASS.
+```
+┌─────────────────┬──────────────────────────────────┬─────────────────────────────────┐
+│ Component       │ 1st Priority (Cloud API)         │ Backup Fallback (Local M4)      │
+├─────────────────┼──────────────────────────────────┼─────────────────────────────────┤
+│ Speech-to-Text  │ Groq Whisper (whisper-large-v3)  │ faster-whisper (base int8 CPU)  │
+│ LLM Reasoning   │ Groq Llama 3.3 70B Versatile     │ Ollama Qwen3-8B / Rule Persona  │
+│ Text-to-Speech  │ Google Cloud TTS / Azure Neural  │ Piper TTS (en_US-lessac-medium) │
+└─────────────────┴──────────────────────────────────┴─────────────────────────────────┘
+```
+
+1. **Speech-to-Text (STT):**
+   - *Primary:* **Groq Whisper Cloud API** (~0.8s latency, Whisper Large v3 accuracy).
+   - *Fallback:* Local **faster-whisper `base`** running on server CPU.
 2. **Context Bundle Assembly:**
-   - The transcript is merged with the active visual context (from the in-memory TTL cache) and retrieved person memories into a structured LLM prompt.
-   - **Test result:** `context_cache.store_visual_context()` → `get_visual_context()` round-trips correctly. PASS.
+   - Transcript is merged with the active visual context (from the in-memory TTL cache) and retrieved person memories into a structured LLM prompt.
 3. **Language Model Reasoning:**
-   - The assembled prompt is processed by the selected LLM (`app/services/llm_service.py`): local **Ollama Qwen3-8B** by default, **Groq Llama 3** when `LLM_PROVIDER=groq`. Falls back to warm rule responses when the provider is offline.
-   - **Test result:** Ollama `qwen3:8b` generates warm companion response in ~11s. "Sweetheart, that's your daughter, Sarah! She brought you those warm muffins yesterday..." PASS.
-4. **Text-to-Speech Synthesis (Piper):**
-   - The response text is synthesized with **Piper** (`en_US-lessac-medium` voice) into WAV streams served from `/static/audio/` for the patient's Bluetooth earpiece.
-   - **Test result:** "This is your daughter Sarah." → 59KB WAV file generated. PASS.
+   - *Primary:* **Groq Cloud API (`llama-3.3-70b-versatile`)** provides warm companion responses in ~0.5s.
+   - *Fallback:* Local **Ollama Qwen3-8B** (~15-25s) or rule-based fallback persona.
+4. **Text-to-Speech Synthesis (TTS):**
+   - *Primary:* **Google Cloud / Azure Neural TTS** generates natural, lifelike audio.
+   - *Fallback:* Local **Piper TTS** (`en_US-lessac-medium` ONNX) synthesizes WAV audio served from `/static/audio/`.
 
 ---
 
@@ -82,19 +86,16 @@ The system prompt strictly governs the tone and personality of the LLM:
 
 ---
 
-## LLM Engine: Resolved
+## LLM Engine Strategy: Cloud-First Hybrid (ADR #10)
 
-> [!done] Decision: Ollama Qwen3-8B (Default)
-> Local **Ollama Qwen3-8B** (Q4_K_M quantization, 8.2B parameters) runs as the default LLM provider.
-> - **Latency:** ~11-15s per response on M4 MacBook Air.
-> - **Privacy:** 100% local LAN — no data leaves the device.
-> - **Fallback:** When Ollama is offline, `llm_service.py` returns warm rule-based responses (e.g., "This is your daughter Sarah...").
-> - **Alternative:** Groq Llama 3 API supported via `LLM_PROVIDER=groq` config. Faster but requires internet and sends transcripts off-device.
+> [!done] Decision: Groq Cloud (Primary) + Ollama Local (Fallback)
+> - **Cloud Priority:** `LLM_PROVIDER=groq` with `GROQ_API_KEY`. Delivers sub-second latency critical for real-time conversation.
+> - **Local Fallback:** If internet is down or Groq returns an error, the pipeline automatically shifts to local Ollama `Qwen3-8B` or rule-based persona responses with zero user interruption.
 
 ---
 
 ## Related Documentation
+- [[02 - Architecture Overview]] — Data flow and component interaction.
 - [[04 - Backend (FastAPI on M4)]] — Server orchestrator executing model tasks.
 - [[06 - Data Model (Qdrant Schema)]] — Vector payload structure for matched entities.
-- [[03 - Mobile Client (Android)]] — Mobile voice conversation and BLE scanning.
-- [[11 - Build Roadmap]] — Implementation phases.
+- [[09 - Decisions Log]] — ADR #10 (Hybrid Cloud-First Architecture with Local Fallback).

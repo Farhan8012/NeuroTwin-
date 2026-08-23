@@ -1,127 +1,100 @@
 import React, { useState } from 'react'
-import { Card, Badge, Button, Input } from '../common/UIPrimitives'
-import { MemoryCard } from '../common/MemoryCard'
 import { useAppState } from '../../context/AppStateContext'
-import { AlbumModal } from '../common/AlbumModal'
 
 export function MemoryLibraryView() {
-  const { setAddMemoryOpen, activePatient, memoryAlbums, showToast, saveMemoryAlbum, deleteMemoryAlbum } = useAppState()
-  const [selectedCategory, setSelectedCategory] = useState('All')
-  const [query, setQuery] = useState('')
+  const { memoryAlbums, isLoadingMemories, saveMemoryAlbum, deleteMemoryAlbum, showToast, registeredPeople } = useAppState()
+  const [showAdd, setShowAdd] = useState(false)
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [category, setCategory] = useState('Family')
+  const [year, setYear] = useState('')
+  const categories = ['Family', 'Travel', 'Music', 'Milestones', 'Recipes']
 
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingAlbum, setEditingAlbum] = useState(null)
-
-  const handleSaveAlbum = async (albumData) => {
-    try {
-      await saveMemoryAlbum(editingAlbum ? { ...albumData, id: editingAlbum.id } : albumData)
-      showToast(editingAlbum ? 'Album updated successfully' : 'Album created successfully', 'success')
-    } catch (err) {
-      showToast(`Save failed: ${err.message}`, 'error')
-    }
-    setModalOpen(false)
-    setEditingAlbum(null)
+  const handleSave = async () => {
+    if (!title.trim()) { showToast('Please enter a title', 'error'); return }
+    await saveMemoryAlbum({ title, description, category, year })
+    setShowAdd(false); setTitle(''); setDescription(''); setYear('')
   }
-
-  const handleDeleteAlbum = async (id) => {
-    if (window.confirm('Are you sure you want to delete this album?')) {
-      await deleteMemoryAlbum(id)
-      showToast('Album deleted', 'info')
-    }
-  }
-
-  const filteredMemories = memoryAlbums.filter(
-    (m) =>
-      (selectedCategory === 'All' || m.category === selectedCategory) &&
-      (m.title.toLowerCase().includes(query.toLowerCase()) || m.description.toLowerCase().includes(query.toLowerCase()))
-  )
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">Memory Library</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Indexed AI memories, family photo archives, and voice prompts for <strong>{activePatient.name}</strong> ({memoryAlbums.length} albums)
-          </p>
-        </div>
-        <Button variant="primary" size="md" onClick={() => { setEditingAlbum(null); setModalOpen(true); }}>
-          ➕ Add New Memory Album
-        </Button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--nt-on-surface)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="material-symbols-outlined" style={{ color: 'var(--nt-primary)' }}>psychology</span>
+          Memory Library
+        </h2>
+        <button className="nt-btn nt-btn-primary" onClick={() => setShowAdd(true)} style={{ fontSize: 13, padding: '10px 16px' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span> Add Memory
+        </button>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
-        <div className="w-full md:w-72">
-          <Input placeholder="Search memory titles, dates, or tags..." value={query} onChange={(e) => setQuery(e.target.value)} />
+      {isLoadingMemories ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[1,2,3].map(i => <div key={i} className="nt-skeleton" style={{ height: 96 }} />)}
         </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {['All', 'Family', 'Travel', 'Music', 'Milestones', 'Recipes'].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                selectedCategory === cat
-                  ? 'bg-[#2B6CB0] text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Gallery Grid or Empty State */}
-      {memoryAlbums.length === 0 ? (
-        <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700">
-          <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600 mb-4 block">photo_library</span>
-          <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300">No Memories Yet</h3>
-          <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
-            Create an album to start preserving memories and photos for your loved one.
-          </p>
-          <Button variant="primary" className="mt-6 mx-auto block" onClick={() => { setEditingAlbum(null); setModalOpen(true); }}>
-            Create First Album
-          </Button>
-        </div>
-      ) : filteredMemories.length === 0 ? (
-        <div className="py-20 text-center">
-          <p className="text-slate-500">No memory albums found for your search/filter.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredMemories.map((mem) => (
-            <div key={mem.id} className="relative group">
-              <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                  onClick={() => { setEditingAlbum(mem); setModalOpen(true); }}
-                  className="p-2 bg-white/90 dark:bg-slate-800/90 hover:bg-primary hover:text-white rounded-full text-slate-700 dark:text-slate-300 shadow-md backdrop-blur-sm transition"
-                  title="Edit Album"
-                >
-                  <span className="material-symbols-outlined text-[18px]">edit</span>
-                </button>
-                <button 
-                  onClick={() => handleDeleteAlbum(mem.id)}
-                  className="p-2 bg-white/90 dark:bg-slate-800/90 hover:bg-rose-500 hover:text-white rounded-full text-slate-700 dark:text-slate-300 shadow-md backdrop-blur-sm transition"
-                  title="Delete Album"
-                >
-                  <span className="material-symbols-outlined text-[18px]">delete</span>
+      ) : memoryAlbums.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {memoryAlbums.map((m) => (
+            <div key={m.id} className="nt-card" style={{ padding: 'var(--sp-md)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span className="nt-badge nt-badge-info">{m.category}</span>
+                    {m.year && <span style={{ fontSize: 12, color: 'var(--nt-on-surface-variant)' }}>{m.year}</span>}
+                  </div>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--nt-on-surface)' }}>{m.title}</h3>
+                  {m.description && <p style={{ fontSize: 13, color: 'var(--nt-on-surface-variant)', marginTop: 4, lineHeight: 1.4 }}>{m.description}</p>}
+                  {m.contributor && <p style={{ fontSize: 11, color: 'var(--nt-secondary)', marginTop: 4 }}>By {m.contributor}</p>}
+                </div>
+                <button className="nt-btn-ghost" onClick={() => deleteMemoryAlbum(m.id)} style={{ color: 'var(--nt-error)', padding: 6, minHeight: 'auto' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
                 </button>
               </div>
-              <MemoryCard memory={mem} />
             </div>
           ))}
         </div>
+      ) : (
+        <div className="nt-empty">
+          <span className="material-symbols-outlined nt-empty-icon">psychology</span>
+          <h4 className="nt-empty-title">No memories yet</h4>
+          <p className="nt-empty-desc">Add your first memory to build the patient's cognitive support library.</p>
+          <button className="nt-btn nt-btn-primary" onClick={() => setShowAdd(true)} style={{ marginTop: 8 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span> Add First Memory
+          </button>
+        </div>
       )}
 
-      <AlbumModal 
-        isOpen={modalOpen}
-        onClose={() => { setModalOpen(false); setEditingAlbum(null); }}
-        album={editingAlbum}
-        onSave={handleSaveAlbum}
-      />
+      {/* Add Memory Modal */}
+      {showAdd && (
+        <div className="nt-modal-overlay" onClick={() => setShowAdd(false)}>
+          <div className="nt-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--nt-on-surface)', marginBottom: 16 }}>Add Memory</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div><label className="nt-label">Title</label><input className="nt-input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Family dinner in 1985" /></div>
+              <div><label className="nt-label">Description</label><textarea className="nt-input" value={description} onChange={e => setDescription(e.target.value)} placeholder="Details about this memory..." rows={3} style={{ resize: 'vertical' }} /></div>
+              <div>
+                <label className="nt-label">Category</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {categories.map(c => (
+                    <button key={c} type="button" onClick={() => setCategory(c)} style={{
+                      padding: '6px 14px', borderRadius: 'var(--r-full)', fontSize: 13, fontWeight: 600,
+                      border: `1.5px solid ${category === c ? 'var(--nt-primary)' : 'var(--nt-outline-variant)'}`,
+                      background: category === c ? 'var(--nt-primary-fixed)' : 'transparent',
+                      color: category === c ? 'var(--nt-primary)' : 'var(--nt-on-surface-variant)',
+                      cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                    }}>{c}</button>
+                  ))}
+                </div>
+              </div>
+              <div><label className="nt-label">Year</label><input className="nt-input" value={year} onChange={e => setYear(e.target.value)} placeholder="1985" /></div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button className="nt-btn nt-btn-secondary" onClick={() => setShowAdd(false)} style={{ flex: 1 }}>Cancel</button>
+                <button className="nt-btn nt-btn-primary" onClick={handleSave} style={{ flex: 1 }}>Save Memory</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

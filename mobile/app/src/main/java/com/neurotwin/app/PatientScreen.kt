@@ -1,369 +1,471 @@
 package com.neurotwin.app
 
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.neurotwin.app.auth.AuthState
+import com.neurotwin.app.auth.Mode
+import com.neurotwin.app.caregiver.CaregiverViewModel
+import com.neurotwin.app.data.ApiResult
+import com.neurotwin.app.network.RetrofitClient
 import com.neurotwin.app.service.VoiceConversationManager
+import java.util.Calendar
 
-/**
- * The senior-patient companion experience — unchanged from v1.
- * Large type, hold-to-talk voice, recognized-person card.
- */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SeniorPatientMainScreen(voiceManager: VoiceConversationManager) {
-    var recognizedPerson by remember { mutableStateOf("Sarah Varma") }
-    var relationship by remember { mutableStateOf("Your Daughter") }
-    var summaryText by remember { mutableStateOf("Tap the microphone and ask a question. I'm here to help you remember.") }
+fun SeniorPatientMainScreen(
+    voiceManager: VoiceConversationManager,
+    vm: CaregiverViewModel = viewModel()
+) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { vm.refreshAll() }
 
-    // Voice conversation state
-    var isRecording by remember { mutableStateOf(false) }
-    var isSending by remember { mutableStateOf(false) }
-    var isPlaying by remember { mutableStateOf(false) }
-    var responseText by remember { mutableStateOf<String?>(null) }
-    var responseAudioUrl by remember { mutableStateOf<String?>(null) }
-    var statusMessage by remember { mutableStateOf("") }
-
-    val recordButtonColor by animateColorAsState(
-        if (isRecording) Color(0xFFEF4444) else Color.White,
-        label = "record_btn"
-    )
-    val recordButtonTextColor by animateColorAsState(
-        if (isRecording) Color.White else Color(0xFF090A0F),
-        label = "record_btn_text"
-    )
-
-    // Cleanup on dispose
-    DisposableEffect(Unit) {
-        onDispose { voiceManager.stop() }
-    }
+    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(Color(0xFFFAFAFA))
+            .padding(16.dp)
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // App Header
+        // App Header with Caregiver Mode switch button
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "NeuroTwin Companion",
-                fontSize = 22.sp,
+                text = "NeuroTwin",
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = Color(0xFF1E293B)
             )
+            TextButton(onClick = { AuthState.enter(Mode.CAREGIVER) }) {
+                Text("⚙️ Caregiver", color = Color(0xFF64748B))
+            }
         }
 
-        // Senior Hero Recognized Person Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(2.dp, Color(0xFF2C334A), RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2030))
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
+        // Greeting Banner
+        GreetingBanner(vm)
+
+        // Medications
+        MedicationsSection(vm)
+
+        // Family & Friends
+        FamilySection(vm)
+
+        // Featured Memory
+        FeaturedMemorySection(vm)
+
+        // SOS Alert
+        SOSCard {
+            Toast.makeText(context, "🚨 SOS ALERT SENT! Care team notified.", Toast.LENGTH_LONG).show()
+        }
+
+        // AI Chat Widget
+        AIChatWidget(voiceManager)
+    }
+}
+
+@Composable
+fun GreetingBanner(vm: CaregiverViewModel) {
+    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    val greeting = when {
+        hour < 12 -> "Good Morning"
+        hour < 17 -> "Good Afternoon"
+        else -> "Good Evening"
+    }
+    
+    val peopleRes = vm.people
+    val firstName = if (peopleRes is ApiResult.Success && peopleRes.data.isNotEmpty()) {
+        "there" // In a real app we'd have the patient's own profile, but for now fallback
+    } else {
+        "there"
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2563EB)),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("🌞", fontSize = 28.sp)
                 Text(
-                    text = relationship.uppercase(),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFBBF24),
-                    modifier = Modifier
-                        .background(Color(0x26FBBF24), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = recognizedPerson,
-                    fontSize = 32.sp,
+                    text = "$greeting, $firstName",
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = summaryText,
-                    fontSize = 18.sp,
-                    color = Color(0xFFC5CBD8),
-                    lineHeight = 26.sp
-                )
             }
-        }
-
-        // ===== VOICE CONVERSATION: Big Hold-to-Talk Button =====
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(88.dp)
-                .background(recordButtonColor, RoundedCornerShape(16.dp))
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onPress = {
-                            // Finger down → start recording
-                            isRecording = true
-                            statusMessage = "🎤 Listening... speak now"
-                            responseText = null
-
-                            voiceManager.startConversationFromRecording(
-                                object : VoiceConversationManager.Callback {
-                                    override fun onRecordingStopped() {
-                                        isRecording = false
-                                        isSending = true
-                                        statusMessage = "🧠 Thinking..."
-                                    }
-                                    override fun onResponseReceived(transcript: String, response: String, audioUrl: String?) {
-                                        isSending = false
-                                        responseText = response
-                                        responseAudioUrl = audioUrl
-                                        statusMessage = "✓ Response ready"
-                                    }
-                                    override fun onAudioPlaybackStarted() {
-                                        isPlaying = true
-                                        statusMessage = "🔊 Playing response..."
-                                    }
-                                    override fun onAudioPlaybackFinished() {
-                                        isPlaying = false
-                                        statusMessage = ""
-                                    }
-                                    override fun onError(message: String) {
-                                        isRecording = false
-                                        isSending = false
-                                        statusMessage = "⚠ $message"
-                                    }
-                                }
-                            )
-
-                            tryAwaitRelease()
-
-                            // Finger up → stop recording
-                            voiceManager.stopRecording()
-                            isRecording = false
-                        }
-                    )
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = when {
-                        isRecording -> "🎤 Listening..."
-                        isSending -> "🧠 Thinking..."
-                        isPlaying -> "🔊 Playing..."
-                        else -> "🎙️ Hold to Talk"
-                    },
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = recordButtonTextColor
-                )
-                if (statusMessage.isNotEmpty() && !isRecording) {
-                    Text(
-                        text = statusMessage,
-                        fontSize = 14.sp,
-                        color = recordButtonTextColor.copy(alpha = 0.7f)
-                    )
-                }
-            }
-        }
-
-        // Status indicator
-        if (statusMessage.isNotEmpty() && !isRecording) {
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = statusMessage,
-                fontSize = 16.sp,
-                color = when {
-                    statusMessage.startsWith("⚠") -> Color(0xFFEF4444)
-                    statusMessage.startsWith("✓") -> Color(0xFF22C55E)
-                    else -> Color(0xFFC5CBD8)
-                },
-                textAlign = TextAlign.Center
+                text = "Today is a peaceful day. Talk to NeuroTwin anytime you want.",
+                fontSize = 15.sp,
+                color = Color.White.copy(alpha = 0.9f),
+                lineHeight = 22.sp
             )
-        }
-
-        // ===== RESPONSE DISPLAY =====
-        if (responseText != null) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(2.dp, Color(0xFFFBBF24), RoundedCornerShape(16.dp)),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2030))
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = "Companion Response",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFBBF24),
-                        modifier = Modifier
-                            .background(Color(0x26FBBF24), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = responseText!!,
-                        fontSize = 20.sp,
-                        color = Color.White,
-                        lineHeight = 28.sp
-                    )
-
-                    // Play audio button if available
-                    if (responseAudioUrl != null) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                val url = responseAudioUrl!!
-                                val fullUrl = if (url.startsWith("http")) url else "http://10.0.2.2:8000$url"
-                                // Use MediaPlayer directly for playback
-                                try {
-                                    val mp = android.media.MediaPlayer()
-                                    mp.setDataSource(fullUrl)
-                                    mp.setOnPreparedListener { mp.start() }
-                                    mp.setOnCompletionListener { it.release() }
-                                    mp.prepareAsync()
-                                    isPlaying = true
-                                } catch (e: Exception) { /* ignore */ }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFBBF24))
-                        ) {
-                            Text(
-                                text = "🔊 Play Audio Response",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF090A0F)
-                            )
-                        }
-                    }
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { /* Scroll to chat */ },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Filled.PsychologyAlt, contentDescription = null, tint = Color.White)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Talk to NeuroTwin", color = Color.White)
                 }
-            }
-        }
-
-        // ===== QUICK ACTION BUTTONS =====
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Quick text query buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                QuickQueryButton(
-                    label = "👤 Who is this?",
-                    query = "Who is this person?",
-                    voiceManager = voiceManager,
-                    enabled = !isSending,
-                    onStarted = { isSending = true; statusMessage = "🧠 Thinking..." },
-                    onResponse = { response, audio ->
-                        isSending = false; responseText = response; responseAudioUrl = audio
-                        statusMessage = "✓ Response ready"
-                    },
-                    onError = { isSending = false; statusMessage = "⚠ $it" },
-                    modifier = Modifier.weight(1f),
-                )
-
-                QuickQueryButton(
-                    label = "🔍 Where are my glasses?",
-                    query = "Where are my glasses?",
-                    voiceManager = voiceManager,
-                    enabled = !isSending,
-                    onStarted = { isSending = true; statusMessage = "🧠 Thinking..." },
-                    onResponse = { response, audio ->
-                        isSending = false; responseText = response; responseAudioUrl = audio
-                        statusMessage = "✓ Response ready"
-                    },
-                    onError = { isSending = false; statusMessage = "⚠ $it" },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            // Play music button (stub until audio assets land)
-            Button(
-                onClick = { /* Play music via TTS or bundled audio */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF131622))
-            ) {
-                Text(
-                    text = "🎵 Play \"You Are My Sunshine\"",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-            }
-
-            // Call emergency contact (stub until contact fetch lands)
-            Button(
-                onClick = { /* Initiate phone call */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF131622))
-            ) {
-                Text(
-                    text = "📞 Call Daughter Sarah",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
+                Button(
+                    onClick = { /* Open memories view */ },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Filled.PhotoLibrary, contentDescription = null, tint = Color(0xFF2563EB))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Open Memories", color = Color(0xFF2563EB))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun QuickQueryButton(
-    label: String,
-    query: String,
-    voiceManager: VoiceConversationManager,
-    enabled: Boolean,
-    onStarted: () -> Unit,
-    onResponse: (String, String?) -> Unit,
-    onError: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Button(
-        onClick = {
-            onStarted()
-            voiceManager.sendTextQuery(query, object : VoiceConversationManager.Callback {
-                override fun onResponseReceived(transcript: String, response: String, audioUrl: String?) =
-                    onResponse(response, audioUrl)
-                override fun onError(message: String) = onError(message)
-            })
-        },
-        enabled = enabled,
-        modifier = modifier.height(64.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF131622))
+fun MedicationsSection(vm: CaregiverViewModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White
-        )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Filled.Medication, contentDescription = null, tint = Color(0xFF2563EB))
+                    Text("Today's Medications", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2563EB))
+                }
+                Text("View All →", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            when (val r = vm.medicines) {
+                null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                is ApiResult.Failure -> Text("Error loading meds", color = Color.Red)
+                is ApiResult.Success -> {
+                    if (r.data.isEmpty()) {
+                        Text("No medications scheduled.", color = Color.Gray, modifier = Modifier.padding(vertical = 16.dp))
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            r.data.take(3).forEach { m ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Filled.Schedule, contentDescription = null, tint = Color(0xFF2563EB))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text("${m.name} — ${m.dosage}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B))
+                                        Text(m.scheduleTime, fontSize = 12.sp, color = Color(0xFF64748B))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FamilySection(vm: CaregiverViewModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Filled.FamilyRestroom, contentDescription = null, tint = Color(0xFF2563EB))
+                Text("Family & Friends", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2563EB))
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            when (val r = vm.people) {
+                null -> CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                is ApiResult.Failure -> Text("Error loading family", color = Color.Red)
+                is ApiResult.Success -> {
+                    if (r.data.isEmpty()) {
+                        Text("Your loved ones will appear here.", color = Color.Gray)
+                    } else {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(r.data) { f ->
+                                Row(
+                                    modifier = Modifier
+                                        .width(160.dp)
+                                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFDBEAFE)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (f.photoUrls.isNotEmpty()) {
+                                            AsyncImage(
+                                                model = RetrofitClient.currentBaseUrl().trimEnd('/') + f.photoUrls.first(),
+                                                contentDescription = f.name,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        } else {
+                                            Text(f.name.take(1), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(f.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B), maxLines = 1)
+                                        Text(f.relationship, fontSize = 12.sp, color = Color(0xFF10B981), fontWeight = FontWeight.Medium)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FeaturedMemorySection(vm: CaregiverViewModel) {
+    val memoriesRes = vm.memories
+    if (memoriesRes is ApiResult.Success && memoriesRes.data.isNotEmpty()) {
+        val memory = memoriesRes.data.first()
+        Card(
+            modifier = Modifier.fillMaxWidth().border(2.dp, Color(0xFFDBEAFE), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Filled.Favorite, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(16.dp))
+                    Text("FEATURED MEMORY", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF1F5F9)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.PhotoLibrary, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(48.dp))
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(memory.title, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                memory.description?.let {
+                    Text(it, fontSize = 13.sp, color = Color(0xFF64748B), maxLines = 2)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SOSCard(onSosClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().border(2.dp, Color(0xFFEF4444), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFEE2E2)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Filled.Sos, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(32.dp))
+                Column {
+                    Text("Need Immediate Help?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF991B1B))
+                    Text("Tap to alert your care team", fontSize = 12.sp, color = Color(0xFFEF4444))
+                }
+            }
+            Button(
+                onClick = onSosClick,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("SEND SOS", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun AIChatWidget(voiceManager: VoiceConversationManager) {
+    var isRecording by remember { mutableStateOf(false) }
+    var isSending by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var responseText by remember { mutableStateOf<String?>(null) }
+    var statusMessage by remember { mutableStateOf("") }
+
+    val recordButtonColor by animateColorAsState(if (isRecording) Color(0xFFEF4444) else Color(0xFF1E293B))
+    val context = LocalContext.current
+
+    Card(
+        modifier = Modifier.fillMaxWidth().height(380.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth().background(Color(0xFF1E293B)).padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF334155)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🤖", fontSize = 20.sp)
+                }
+                Column {
+                    Text("NeuroTwin Companion", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(
+                        when {
+                            isRecording -> "Listening..."
+                            isSending -> "Thinking..."
+                            isPlaying -> "Speaking..."
+                            else -> "Online & Ready"
+                        },
+                        fontSize = 13.sp, color = Color(0xFF94A3B8)
+                    )
+                }
+            }
+
+            // Chat area
+            Box(modifier = Modifier.weight(1f).fillMaxWidth().background(Color(0xFFF8FAFC)).padding(16.dp)) {
+                if (responseText != null) {
+                    // Chat bubble
+                    Box(
+                        modifier = Modifier
+                            .background(Color.White, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 0.dp))
+                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 0.dp))
+                            .padding(16.dp)
+                            .align(Alignment.BottomStart)
+                    ) {
+                        Text(responseText!!, fontSize = 15.sp, color = Color(0xFF1E293B))
+                    }
+                } else {
+                    // Welcome
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Filled.Mic, contentDescription = null, tint = Color(0xFFCBD5E1), modifier = Modifier.size(48.dp))
+                        Spacer(Modifier.height(16.dp))
+                        Text("Hold the microphone button to ask a question", color = Color(0xFF94A3B8), textAlign = TextAlign.Center)
+                    }
+                }
+            }
+
+            // Input area
+            Box(
+                modifier = Modifier.fillMaxWidth().background(Color.White).padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(recordButtonColor)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onPress = {
+                                    isRecording = true
+                                    responseText = null
+                                    statusMessage = "Listening..."
+                                    voiceManager.startConversationFromRecording(
+                                        object : VoiceConversationManager.Callback {
+                                            override fun onRecordingStopped() {
+                                                isRecording = false
+                                                isSending = true
+                                                statusMessage = "Thinking..."
+                                            }
+                                            override fun onResponseReceived(t: String, r: String, a: String?) {
+                                                isSending = false
+                                                responseText = r
+                                                statusMessage = "Response ready"
+                                            }
+                                            override fun onAudioPlaybackStarted() { isPlaying = true }
+                                            override fun onAudioPlaybackFinished() { isPlaying = false }
+                                            override fun onError(m: String) {
+                                                isRecording = false
+                                                isSending = false
+                                                Toast.makeText(context, "Error: $m", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    )
+                                    tryAwaitRelease()
+                                    voiceManager.stopRecording()
+                                    isRecording = false
+                                }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Filled.Mic, contentDescription = null, tint = Color.White)
+                        Text(if (isRecording) "Release to Send" else "Hold to Talk", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }

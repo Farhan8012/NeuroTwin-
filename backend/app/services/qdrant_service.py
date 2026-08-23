@@ -30,12 +30,31 @@ def _from_uuid(vid: Any) -> str:
 
 class QdrantService:
     def __init__(self):
+        self.is_connected = False
+        
+        # 1. Attempt Qdrant Cloud if URL is provided
+        if settings.QDRANT_URL:
+            try:
+                self.client = QdrantClient(
+                    url=settings.QDRANT_URL,
+                    api_key=settings.QDRANT_API_KEY if settings.QDRANT_API_KEY else None,
+                    timeout=10.0
+                )
+                self._init_collections()
+                self.is_connected = True
+                logger.info("Connected to Qdrant Cloud at %s", settings.QDRANT_URL)
+                return
+            except Exception as e:
+                logger.warning("Qdrant Cloud connection failed: %s. Falling back to local Qdrant.", e)
+
+        # 2. Attempt local Qdrant service
         try:
-            self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
+            self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT, timeout=5.0)
             self._init_collections()
             self.is_connected = True
+            logger.info("Connected to local Qdrant at %s:%d", settings.QDRANT_HOST, settings.QDRANT_PORT)
         except Exception as e:
-            logger.warning("Qdrant DB connection failed, using in-memory mode: %s", e)
+            logger.warning("Local Qdrant DB connection failed, using in-memory mode: %s", e)
             self.client = QdrantClient(":memory:")
             self._init_collections()
             self.is_connected = False

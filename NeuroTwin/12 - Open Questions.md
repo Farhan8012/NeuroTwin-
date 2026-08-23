@@ -16,6 +16,10 @@ This note serves as the living source of truth for all unresolved design decisio
 
 ## Resolved Questions
 
+> [!note] RESOLVED — Question #1: LLM Hosting Strategy (Groq Cloud vs. Local Ollama)
+> - **Resolution:** Implemented as a **Cloud-First Hybrid with Automatic Local Fallback**. Groq Llama 3.3 70B (`LLM_PROVIDER=groq`) operates as the primary engine for sub-second responses (~0.5s), with automatic failover to local Ollama (Qwen3-8B) and rule-based persona responses if cloud APIs are offline.
+> - **ADR:** See [[09 - Decisions Log]] (ADR #10).
+
 > [!note] RESOLVED — Question #2: Caregiver Interface Platform Strategy
 > - **Resolution:** Implemented as an **ultra-minimalist, professional dark-mode Web Application** located in `web/` designed via Stitch MCP.
 > - **ADR:** See [[09 - Decisions Log]] (ADR #4).
@@ -23,12 +27,6 @@ This note serves as the living source of truth for all unresolved design decisio
 ---
 
 ## Active Open Questions
-
-> [!question] 1. LLM Hosting Strategy: Groq Cloud API vs. Local Ollama Qwen3-8B
-> - **Context:** Groq-hosted Llama 3 offers ultra-fast response times and free API access, offloading compute from the M4 server, but requires an active internet connection and sends data off-device. Local Ollama + Qwen3-8B running on the M4 keeps all data 100% private on the local LAN, but competes directly for RAM, CPU, and GPU resources with Qdrant, InsightFace, YOLO, Whisper, and TTS.
-> - **Benchmark (2026-08-19):** First-pass measurement on the M4 (16GB Air, llama-server on CPU — mmap disabled): Qwen3-8B generation ≈ 19–27s per response. The warm-companion persona + TTS loop is usable for demo but noticeably laggy for realtime earpiece conversation.
-> - **Action Item:** Benchmark Groq Llama 3 (`LLM_PROVIDER=groq`) for comparison. If Groq latency is <1s, ship Groq as the default for interactive voice and keep Ollama as the offline/privacy fallback.
-> - **Cross-Reference:** [[05 - AI Pipeline]], [[04 - Backend (FastAPI on M4)]]
 
 > [!question] 3. BLE Tags for Physical Object Tracking
 > - **Context:** In addition to visual object detection (YOLO), incorporating physical Bluetooth Low Energy (BLE) beacon tags could provide precise indoor triangulation for misplaced items like keys or wallets.

@@ -10,16 +10,19 @@ router = APIRouter(prefix="/health", tags=["Health & Telemetry"])
 
 
 def _qdrant_status() -> str:
-    try:
-        qdrant_service.client.get_collections()
+    if getattr(qdrant_service, "is_connected", False):
         return "connected"
+    try:
+        if hasattr(qdrant_service, "client") and qdrant_service.client:
+            return "connected"
+        return "disconnected"
     except Exception:
         return "disconnected"
 
 
 async def _ollama_status() -> str:
     try:
-        async with httpx.AsyncClient(timeout=2) as client:
+        async with httpx.AsyncClient(timeout=0.5) as client:
             resp = await client.get(f"{settings.OLLAMA_BASE_URL}/api/tags")
             return "active" if resp.status_code == 200 else "unreachable"
     except Exception:
