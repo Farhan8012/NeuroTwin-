@@ -15,7 +15,7 @@ export function SignInView() {
 
   return (
     <div style={{
-      minHeight: '100vh', minHeight: '100dvh',
+      minHeight: '100vh',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       padding: '24px 16px',
       background: 'linear-gradient(180deg, var(--nt-surface) 0%, var(--nt-surface-low) 100%)',
