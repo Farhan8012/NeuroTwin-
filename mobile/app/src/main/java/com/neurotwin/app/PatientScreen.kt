@@ -79,9 +79,14 @@ fun SeniorPatientMainScreen(
 
     var showAllMedsDialog by remember { mutableStateOf(false) }
     var selectedPerson by remember { mutableStateOf<Person?>(null) }
+    var showProfileDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         vm.refreshAll()
+    }
+
+    if (showProfileDialog) {
+        com.neurotwin.app.ui.screens.ProfileEditDialog(onDismiss = { showProfileDialog = false })
     }
 
     Column(
@@ -94,7 +99,7 @@ fun SeniorPatientMainScreen(
     ) {
         val isDark = com.neurotwin.app.ui.theme.ThemeState.isDarkMode
 
-        // Top Header
+        // Top Header - Clean & Minimal
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -116,23 +121,38 @@ fun SeniorPatientMainScreen(
                     color = com.neurotwin.app.ui.theme.AppColors.textPrimary
                 )
             }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                IconButton(onClick = { com.neurotwin.app.ui.theme.ThemeState.toggle(context) }) {
-                    Icon(
-                        if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                        contentDescription = "Toggle Dark Mode",
-                        tint = if (isDark) Color(0xFFFBBF24) else Color(0xFF334155)
+
+            // Clean Clickable Profile Picture (PFP) Avatar
+            val session by AuthState.session.collectAsState()
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            listOf(Color(0xFF38BDF8), Color(0xFF818CF8))
+                        )
                     )
-                }
-                FilledTonalButton(
-                    onClick = { AuthState.enter(Mode.CAREGIVER) },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = com.neurotwin.app.ui.theme.AppColors.pillButtonBg,
-                        contentColor = com.neurotwin.app.ui.theme.AppColors.pillButtonText
+                    .border(2.dp, Color(0xFF38BDF8).copy(alpha = 0.6f), CircleShape)
+                    .clickable { showProfileDialog = true },
+                contentAlignment = Alignment.Center
+            ) {
+                if (!session.avatarUri.isNullOrEmpty()) {
+                    coil.compose.AsyncImage(
+                        model = session.avatarUri,
+                        contentDescription = "User Profile Picture",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
                     )
-                ) {
-                    Text("⚙️ Caregiver", fontWeight = FontWeight.Bold)
+                } else {
+                    Text(
+                        text = session.userName.take(1).uppercase().ifBlank { "F" },
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF0F172A)
+                    )
                 }
             }
         }
@@ -308,21 +328,8 @@ fun GreetingBanner(
     onTalkClick: () -> Unit,
     onMemoriesClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("neurotwin_prefs", Context.MODE_PRIVATE) }
-    var pfpUri by remember { mutableStateOf(prefs.getString("patient_pfp_uri", null)) }
-
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            pfpUri = uri.toString()
-            prefs.edit().putString("patient_pfp_uri", uri.toString()).apply()
-            Toast.makeText(context, "Profile photo updated", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     val isDark = com.neurotwin.app.ui.theme.ThemeState.isDarkMode
+    val session by AuthState.session.collectAsState()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -334,82 +341,27 @@ fun GreetingBanner(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(horizontal = 20.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Profile Picture with Add/Change PFP feature
-            Box(
-                modifier = Modifier
-                    .size(92.dp)
-                    .clickable { photoPickerLauncher.launch("image/*") },
-                contentAlignment = Alignment.BottomEnd
-            ) {
-                if (pfpUri != null) {
-                    AsyncImage(
-                        model = pfpUri,
-                        contentDescription = "Farhan Profile Picture",
-                        modifier = Modifier
-                            .size(92.dp)
-                            .clip(CircleShape)
-                            .border(2.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder, CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(92.dp)
-                            .clip(CircleShape)
-                            .background(com.neurotwin.app.ui.theme.AppColors.cardAlt)
-                            .border(2.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Filled.Person,
-                                contentDescription = "Add Profile Picture",
-                                tint = com.neurotwin.app.ui.theme.AppColors.textSecondary,
-                                modifier = Modifier.size(44.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Add / Edit Camera Badge
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF2563EB))
-                        .border(2.dp, if (isDark) Color(0xFF141619) else Color.White, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Filled.AddPhotoAlternate,
-                        contentDescription = "Change photo",
-                        tint = Color.White,
-                        modifier = Modifier.size(15.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Patient Name
+            // Patient Greeting
             Text(
-                text = "Farhan",
+                text = "Welcome, ${session.userName.ifBlank { "Farhan" }} 👋",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = com.neurotwin.app.ui.theme.AppColors.textPrimary
             )
 
+            Spacer(modifier = Modifier.height(4.dp))
+
             // Patient Status Subtitle
             Text(
-                text = "Status: Active • Routine Monitored",
+                text = "Status: Active • Memory Routine Monitored",
                 fontSize = 13.sp,
                 color = com.neurotwin.app.ui.theme.AppColors.textSecondary
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Pills (Status: Stable, Living Room)
             Row(

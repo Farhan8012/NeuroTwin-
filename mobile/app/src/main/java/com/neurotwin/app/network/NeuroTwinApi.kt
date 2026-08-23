@@ -103,4 +103,35 @@ interface NeuroTwinApi {
 
     @POST("api/v1/ble/rssi")
     suspend fun reportBLE(@Body data: Map<String, Any>): Response<Map<String, Any>>
+
+    // ── Authentication & Real OTP ──
+    @POST("api/v1/auth/send-otp")
+    suspend fun sendOtp(@Body body: SendOtpRequest): Response<AuthResponse>
+
+    @POST("api/v1/auth/verify-otp")
+    suspend fun verifyOtp(@Body body: VerifyOtpRequest): Response<AuthResponse>
 }
+
+data class SendOtpRequest(
+    val phone: String,
+    val user_name: String? = null,
+    val mode: String? = "PATIENT",
+    val channel: String = "sms"
+)
+
+data class VerifyOtpRequest(
+    val phone: String,
+    val otp: String,
+    val user_name: String? = null,
+    val mode: String? = "PATIENT"
+)
+
+data class AuthResponse(
+    val success: Boolean,
+    val message: String,
+    val phone: String,
+    val user_name: String? = null,
+    val mode: String? = null,
+    val token: String? = null,
+    val otp_debug: String? = null
+)

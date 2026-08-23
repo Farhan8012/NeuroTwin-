@@ -87,17 +87,23 @@ class MainActivity : ComponentActivity() {
                     if (showSplash) {
                         com.neurotwin.app.ui.screens.SplashScreen(onAnimationFinished = { showSplash = false })
                     } else {
-                        val mode = AuthState.session.collectAsState().value.mode
-                        when (mode) {
-                            null -> ModeSelectScreen()
-                            Mode.CAREGIVER -> {
-                                // Cancel watchdog — no services needed in caregiver mode
-                                ServiceRestartWorker.cancel(this@MainActivity)
-                                CaregiverApp()
-                            }
-                            Mode.PATIENT -> {
-                                ensurePermissions()
-                                SeniorPatientMainScreen(voiceManager)
+                        val session = AuthState.session.collectAsState().value
+                        if (!session.isLoggedIn) {
+                            com.neurotwin.app.ui.screens.AuthScreen(
+                                onAuthSuccess = { /* AuthState session automatically triggers recomposition */ }
+                            )
+                        } else {
+                            when (session.mode) {
+                                null -> ModeSelectScreen()
+                                Mode.CAREGIVER -> {
+                                    // Cancel watchdog — no services needed in caregiver mode
+                                    ServiceRestartWorker.cancel(this@MainActivity)
+                                    CaregiverApp()
+                                }
+                                Mode.PATIENT -> {
+                                    ensurePermissions()
+                                    SeniorPatientMainScreen(voiceManager)
+                                }
                             }
                         }
                     }

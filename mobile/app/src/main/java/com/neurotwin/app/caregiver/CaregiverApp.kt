@@ -3,7 +3,9 @@ package com.neurotwin.app.caregiver
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -48,6 +50,11 @@ fun CaregiverApp() {
     val current = backStack?.destination?.route ?: "people"
     val context = LocalContext.current
     val isDark = ThemeState.isDarkMode
+    var showProfileDialog by remember { mutableStateOf(false) }
+
+    if (showProfileDialog) {
+        com.neurotwin.app.ui.screens.ProfileEditDialog(onDismiss = { showProfileDialog = false })
+    }
 
     Scaffold(
         containerColor = AppColors.background,
@@ -72,25 +79,39 @@ fun CaregiverApp() {
                     }
                 },
                 actions = {
-                    // Theme Toggle Button
-                    IconButton(onClick = { ThemeState.toggle(context) }) {
-                        Icon(
-                            if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
-                            contentDescription = "Toggle Dark Mode",
-                            tint = if (isDark) Color(0xFFFBBF24) else Color(0xFF334155)
-                        )
-                    }
-
-                    FilledTonalButton(
-                        onClick = { AuthState.enter(Mode.PATIENT) },
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = AppColors.pillButtonBg,
-                            contentColor = AppColors.pillButtonText
-                        ),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                    // Clean Clickable Profile Picture (PFP) Avatar
+                    val session by AuthState.session.collectAsState()
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(
+                                androidx.compose.ui.graphics.Brush.linearGradient(
+                                    listOf(Color(0xFF38BDF8), Color(0xFF818CF8))
+                                )
+                            )
+                            .border(2.dp, Color(0xFF38BDF8).copy(alpha = 0.6f), CircleShape)
+                            .clickable { showProfileDialog = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("👤 Patient Mode", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        if (!session.avatarUri.isNullOrEmpty()) {
+                            coil.compose.AsyncImage(
+                                model = session.avatarUri,
+                                contentDescription = "User Profile Picture",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = session.userName.take(1).uppercase().ifBlank { "F" },
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF0F172A)
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

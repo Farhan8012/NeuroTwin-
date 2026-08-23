@@ -25,8 +25,8 @@ API_KEY = os.getenv("NEUROTWIN_API_KEY", "")
 # Paths that do NOT require authentication (patient-facing)
 _OPEN_PATHS = frozenset({"/", "/docs", "/openapi.json", "/redoc"})
 
-# Path prefixes that are always open (patient pipeline + health)
-_OPEN_PREFIXES = ("/api/v1/health", "/api/v1/frame", "/api/v1/voice-query", "/static")
+# Path prefixes that are always open (patient pipeline + health + auth)
+_OPEN_PREFIXES = ("/api/v1/health", "/api/v1/frame", "/api/v1/voice-query", "/api/v1/auth", "/static")
 
 
 def _requires_auth(path: str) -> bool:
