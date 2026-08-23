@@ -8,13 +8,14 @@ from app.config import settings
 def _clean_llm_text(text: str) -> str:
     if not text:
         return ""
-    # Remove any <think>...</think> blocks
+    # Remove closed <think>...</think> blocks
     cleaned = re.sub(r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE).strip()
-    # If unclosed <think> remains due to max_tokens
+    # Remove any unclosed <think> blocks
     if "<think>" in cleaned.lower():
-        parts = re.split(r"<think>", cleaned, flags=re.IGNORECASE)
-        cleaned = parts[0].strip() if parts[0].strip() else ""
-    return cleaned or text.strip()
+        cleaned = re.sub(r"<think>[\s\S]*", "", cleaned, flags=re.IGNORECASE).strip()
+    if "</think>" in cleaned.lower():
+        cleaned = re.sub(r"[\s\S]*?</think>", "", cleaned, flags=re.IGNORECASE).strip()
+    return cleaned.strip()
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ Rules:
 
 # Groq Cloud API endpoint
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-GROQ_MODEL = "qwen/qwen3.6-27b"
+GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 class LLMCompanionService:
