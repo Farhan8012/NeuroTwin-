@@ -74,6 +74,15 @@ app.add_middleware(APIKeyMiddleware)
 settings.STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
 
+# Serve Web Dashboard under /app and root
+web_dir = settings.BASE_DIR.parent / "web"
+dashboard_dist = settings.BASE_DIR.parent / "dashboard" / "dist"
+
+if web_dir.exists():
+    app.mount("/app", StaticFiles(directory=web_dir, html=True), name="web_app")
+if dashboard_dist.exists():
+    app.mount("/dashboard", StaticFiles(directory=dashboard_dist, html=True), name="dashboard_app")
+
 # Include Router Endpoints
 app.include_router(health.router, prefix=settings.API_V1_STR)
 app.include_router(frame.router, prefix=settings.API_V1_STR)
