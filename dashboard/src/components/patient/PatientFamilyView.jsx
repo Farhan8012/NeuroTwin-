@@ -1,65 +1,94 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { Card, Button } from '../common/UIPrimitives'
 import { useAppState } from '../../context/AppStateContext'
+import { FamilyMemberModal } from '../common/FamilyMemberModal'
 
 export function PatientFamilyView() {
-  const { familyMembers, isLoadingFamily, showToast } = useAppState()
+  const { familyMembers, setFamilyMembers, showToast } = useAppState()
+  
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingMember, setEditingMember] = useState(null)
+
+  const handleSaveMember = (memberData) => {
+    if (editingMember) {
+      setFamilyMembers(familyMembers.map(m => m.id === memberData.id ? memberData : m))
+      showToast('Family member updated', 'success')
+    } else {
+      const newMember = {
+        ...memberData,
+        id: `fam-${Date.now()}`
+      }
+      setFamilyMembers([...familyMembers, newMember])
+      showToast('Family member added', 'success')
+    }
+    setModalOpen(false)
+    setEditingMember(null)
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span className="material-symbols-outlined" style={{ color: 'var(--nt-primary)' }}>family_restroom</span>
-        <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--nt-on-surface)' }}>Family & Friends</h2>
-      </div>
-      <p style={{ fontSize: 14, color: 'var(--nt-on-surface-variant)' }}>Your loved ones who care about you</p>
-
-      {isLoadingFamily ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[1,2,3].map(i => <div key={i} className="nt-skeleton" style={{ height: 88, borderRadius: 'var(--r-lg)' }} />)}
+    <div className="space-y-6 max-w-4xl mx-auto patient-mode-root">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">Your Loved Ones</h2>
+          <p className="text-base text-slate-600 dark:text-slate-300 mt-1">
+            Tap any family member to hear their voice or give them a call.
+          </p>
         </div>
-      ) : familyMembers.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {familyMembers.map((f) => (
-            <div key={f.id} className="nt-card" style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-              padding: 'var(--sp-md)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{
-                  width: 52, height: 52, borderRadius: '50%',
-                  background: 'var(--nt-primary-fixed)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 20, fontWeight: 700, color: 'var(--nt-primary)', flexShrink: 0,
-                }}>
-                  {f.avatar ? (
-                    <img src={f.avatar} alt={f.name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                  ) : f.name.charAt(0)}
-                </div>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--nt-on-surface)' }}>{f.name}</div>
-                  <div style={{ fontSize: 13, color: 'var(--nt-success)', fontWeight: 500 }}>{f.relationship}</div>
-                  {f.phone && <div style={{ fontSize: 12, color: 'var(--nt-on-surface-variant)', marginTop: 2 }}>{f.phone}</div>}
-                </div>
-              </div>
-              {f.phone && (
-                <button
-                  className="nt-btn nt-btn-primary"
-                  onClick={() => showToast(`Calling ${f.name}...`, 'info')}
-                  style={{ padding: '10px 14px', minHeight: 44, fontSize: 13, flexShrink: 0 }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>call</span>
-                  Call
-                </button>
-              )}
-            </div>
-          ))}
+        <Button variant="primary" size="lg" onClick={() => { setEditingMember(null); setModalOpen(true); }}>
+          ➕ Add Loved One
+        </Button>
+      </div>
+
+      {familyMembers.length === 0 ? (
+        <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700">
+          <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600 mb-4 block">family_restroom</span>
+          <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-300">No Loved Ones Added</h3>
+          <p className="text-lg text-slate-500 mt-2 max-w-md mx-auto">
+            You can add family members here to easily call them or see their updates.
+          </p>
+          <Button variant="primary" size="lg" className="mt-8 mx-auto block" onClick={() => { setEditingMember(null); setModalOpen(true); }}>
+            Add Loved One Now
+          </Button>
         </div>
       ) : (
-        <div className="nt-empty">
-          <span className="material-symbols-outlined nt-empty-icon">group</span>
-          <h4 className="nt-empty-title">No family members yet</h4>
-          <p className="nt-empty-desc">Your caregiver will add your family and friends here.</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {familyMembers.map((m, idx) => (
+            <Card key={m.id || idx} className="p-6 text-center space-y-4 border-2 border-slate-200 dark:border-slate-700 relative group">
+              <button 
+                onClick={() => { setEditingMember(m); setModalOpen(true); }}
+                className="absolute top-4 right-4 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-primary transition shadow-sm opacity-0 group-hover:opacity-100"
+                title="Edit Details"
+              >
+                <span className="material-symbols-outlined text-[18px]">edit</span>
+              </button>
+              
+              <img src={m.avatar} alt={m.name} className="w-28 h-28 rounded-full object-cover mx-auto ring-4 ring-[#2B6CB0]/20" />
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-slate-100">{m.name}</h3>
+                <p className="text-lg font-bold text-[#2B6CB0] dark:text-[#63B3ED]">{m.relationship}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">{m.note}</p>
+              </div>
+
+              <Button
+                fullWidth
+                size="lg"
+                variant="primary"
+                onClick={() => showToast(`Dialing ${m.name} at ${m.phone}...`, 'info')}
+              >
+                📞 Call {m.name.split(' ')[0]}
+              </Button>
+            </Card>
+          ))}
         </div>
       )}
+
+      <FamilyMemberModal 
+        isOpen={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingMember(null); }}
+        member={editingMember}
+        onSave={handleSaveMember}
+      />
     </div>
   )
 }
+

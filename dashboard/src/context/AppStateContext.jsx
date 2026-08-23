@@ -1,92 +1,118 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import { api } from '../lib/api'
 
 const AppStateContext = createContext()
 
-// UI category <-> backend memory category mappings
+export const MOCK_PATIENT = {
+  id: 'pt-001',
+  name: 'Eleanor Vance',
+  age: 78,
+  condition: 'Early Stage Alzheimer\'s (Stage 2)',
+  location: 'Cedar Heights Residence, Room 304',
+  primaryCaregiver: 'Sarah Vance (Daughter)',
+  caregiverPhone: '+1 (555) 234-5678',
+  avatar: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=256&q=80',
+  joinDate: 'Oct 2025',
+  cognitiveScore: '78%',
+  memoriesCount: 142,
+  familyMembersCount: 6,
+  dailyStreak: 14,
+}
+
+const MOCK_FAMILY = [
+  {
+    id: 'fam-1',
+    name: 'Sarah Vance',
+    relationship: 'Your Daughter',
+    phone: '+1 (555) 234-5678',
+    note: 'Sarah visits every Tuesday & Thursday. Call her anytime!',
+    avatar: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'fam-2',
+    name: 'David Vance',
+    relationship: 'Your Son',
+    phone: '+1 (555) 345-6789',
+    note: 'David lives in Seattle and calls every Sunday evening.',
+    avatar: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=400&q=80',
+  },
+  {
+    id: 'fam-3',
+    name: 'Emily Vance',
+    relationship: 'Your Granddaughter',
+    phone: '+1 (555) 456-7890',
+    note: 'Emily plays violin and loves baking peach pie with you.',
+    avatar: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=400&q=80',
+  },
+]
+
+const MOCK_MEMORIES = [
+  {
+    id: 'mem-1', title: '1974 Lake Tahoe Family Cabin', category: 'Travel', categoryVariant: 'primary',
+    description: 'Summer trip with Thomas and 5-year-old Sarah. Camping by the blue lake, swimming, and eating fresh trout.',
+    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80',
+    contributor: 'Sarah Vance', year: '1974', isFeatured: false, photos: [],
+  },
+]
+
+// UI category <-> backend memory category
 const CATEGORY_TO_BACKEND = { Family: 'story', Travel: 'place', Music: 'song', Milestones: 'life_event', Recipes: 'hobby' }
 const BACKEND_TO_CATEGORY = { story: 'Family', anecdote: 'Family', place: 'Travel', song: 'Music', life_event: 'Milestones', hobby: 'Recipes' }
 const CATEGORY_VARIANTS = { Family: 'accent', Travel: 'primary', Music: 'secondary', Milestones: 'accent', Recipes: 'secondary' }
 
-function mapBackendMemory(m, index = 0) {
-  const year = m.event_date ? String(m.event_date).slice(0, 4) : (m.year || '')
+function mapBackendMemory(m) {
+  const year = m.event_date ? String(m.event_date).slice(0, 4) : ''
   return {
-    id: m.id || `mem-${index}`,
+    id: m.id,
     title: m.title,
-    category: BACKEND_TO_CATEGORY[m.category] || m.category || 'Family',
+    category: BACKEND_TO_CATEGORY[m.category] || 'Family',
     categoryVariant: CATEGORY_VARIANTS[BACKEND_TO_CATEGORY[m.category]] || 'primary',
     description: m.description,
-    image: m.image || m.photo_url || null,
-    contributor: m.person_binding || (m.person_id ? `Person ${m.person_id}` : 'Family'),
-    year: year || '',
-    isFeatured: m.is_featured !== undefined ? !!m.is_featured : (index === 0),
-    photos: m.photos || [],
+    image: null,
+    contributor: m.person_id ? `Person ${m.person_id}` : 'Family',
+    year,
+    isFeatured: false,
+    photos: [],
   }
 }
 
-function mapBackendContact(c, index = 0) {
+function mapBackendContact(c) {
   return {
-    id: c.id || `fam-${index}`,
+    id: c.id,
     name: c.name,
     relationship: c.relationship || 'Family',
     phone: c.phone || '',
-    note: c.note || (c.is_primary ? 'Primary emergency contact • Available anytime' : 'Family member'),
-    avatar: c.avatar || null,
+    note: c.is_primary ? 'Primary emergency contact' : '',
+    avatar: null,
     is_primary: !!c.is_primary,
   }
 }
 
 export function AppStateProvider({ children }) {
-  // ── Auth State ──────────────────────────────────────
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [mode, setMode] = useState('auth') // 'auth' | 'caregiver' | 'patient'
   const [currentView, setCurrentView] = useState('signin')
   const [userRole, setUserRole] = useState(null)
 
-  // ── UI State ────────────────────────────────────────
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [fontScale, setFontScale] = useState('normal')
+  const [activePatient, setActivePatient] = useState(MOCK_PATIENT)
+
+  // Overlays
   const [searchOpen, setSearchOpen] = useState(false)
   const [audioRecorderOpen, setAudioRecorderOpen] = useState(false)
   const [addMemoryOpen, setAddMemoryOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [toast, setToast] = useState(null)
 
-  // ── Patient context (populated from backend, NOT mock) ──
-  const [activePatient, setActivePatient] = useState({
-    id: null,
-    name: '',
-    age: null,
-    condition: '',
-    location: '',
-    primaryCaregiver: '',
-    caregiverPhone: '',
-    avatar: null,
-    joinDate: '',
-    cognitiveScore: null,
-    memoriesCount: 0,
-    familyMembersCount: 0,
-    dailyStreak: 0,
-  })
-
-  // ── Backend-driven state (starts empty, populated from API) ──
+  // Backend-driven state (mock fallback when offline)
   const [backendOnline, setBackendOnline] = useState(false)
   const [systemHealth, setSystemHealth] = useState(null)
-  const [familyMembers, setFamilyMembers] = useState([])
-  const [memoryAlbums, setMemoryAlbums] = useState([])
+  const [familyMembers, setFamilyMembers] = useState(MOCK_FAMILY)
+  const [memoryAlbums, setMemoryAlbums] = useState(MOCK_MEMORIES)
   const [medicines, setMedicines] = useState([])
   const [registeredPeople, setRegisteredPeople] = useState([])
-  const [albums, setAlbums] = useState([])
 
-  // ── Loading states ──────────────────────────────────
-  const [isLoadingFamily, setIsLoadingFamily] = useState(true)
-  const [isLoadingMemories, setIsLoadingMemories] = useState(true)
-  const [isLoadingMedicines, setIsLoadingMedicines] = useState(true)
-  const [isLoadingPeople, setIsLoadingPeople] = useState(true)
-  const [isLoadingAlbums, setIsLoadingAlbums] = useState(true)
-  const [isLoadingHealth, setIsLoadingHealth] = useState(true)
-
-  // ── Dark mode effect ────────────────────────────────
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark')
@@ -95,7 +121,6 @@ export function AppStateProvider({ children }) {
     }
   }, [isDarkMode])
 
-  // ── Font scale effect ───────────────────────────────
   useEffect(() => {
     document.documentElement.classList.remove('font-scale-large', 'font-scale-xlarge')
     if (fontScale === 'large') {
@@ -105,83 +130,40 @@ export function AppStateProvider({ children }) {
     }
   }, [fontScale])
 
-  // ── Backend sync ────────────────────────────────────
-  const refreshFromBackend = useCallback(async () => {
-    // Health check
+  // ── Initial sync with the FastAPI backend ────────────────────────
+  const refreshFromBackend = async () => {
     try {
-      const health = await api.getHealth().catch(() => null)
-      if (health) {
-        setSystemHealth(health)
-        setBackendOnline(true)
-      } else {
-        setBackendOnline(false)
-      }
+      const health = await api.getHealth()
+      setSystemHealth(health)
+      setBackendOnline(true)
     } catch {
       setBackendOnline(false)
+      return // backend unreachable — keep mock data
     }
-    setIsLoadingHealth(false)
 
-    // Data sync
     try {
-      const [contacts, memories, meds, people, albumsData] = await Promise.all([
-        api.listEmergencyContacts().catch(() => []),
-        api.listMemories().catch(() => []),
+      const [contacts, memories, meds, people] = await Promise.all([
+        api.listEmergencyContacts(),
+        api.listMemories(),
         api.listMedicines().catch(() => []),
         api.listPeople().catch(() => []),
-        api.listAlbums().catch(() => []),
       ])
-
-      // Emergency contacts / family
-      if (Array.isArray(contacts)) {
+      if (Array.isArray(contacts) && contacts.length > 0) {
         setFamilyMembers(contacts.map(mapBackendContact))
-        if (contacts.length > 0) {
-          const primary = contacts.find((c) => c.is_primary) || contacts[0]
-          setActivePatient((prev) => ({
-            ...prev,
-            primaryCaregiver: `${primary.name} (${primary.relationship})`,
-            caregiverPhone: primary.phone || prev.caregiverPhone,
-            familyMembersCount: contacts.length,
-          }))
-        }
-      }
-      setIsLoadingFamily(false)
-
-      // Memories
-      if (Array.isArray(memories)) {
-        setMemoryAlbums(memories.map(mapBackendMemory))
+        const primary = contacts.find((c) => c.is_primary) || contacts[0]
         setActivePatient((prev) => ({
           ...prev,
-          memoriesCount: memories.length,
+          primaryCaregiver: `${primary.name} (${primary.relationship})`,
+          caregiverPhone: primary.phone || prev.caregiverPhone,
         }))
       }
-      setIsLoadingMemories(false)
-
-      // Medicines
-      if (Array.isArray(meds)) {
-        setMedicines(meds)
-      }
-      setIsLoadingMedicines(false)
-
-      // People
-      if (Array.isArray(people)) {
-        setRegisteredPeople(people)
-      }
-      setIsLoadingPeople(false)
-
-      // Albums
-      if (Array.isArray(albumsData)) {
-        setAlbums(albumsData)
-      }
-      setIsLoadingAlbums(false)
+      if (Array.isArray(memories)) setMemoryAlbums(memories.map(mapBackendMemory))
+      if (Array.isArray(meds)) setMedicines(meds)
+      if (Array.isArray(people)) setRegisteredPeople(people)
     } catch (err) {
-      console.warn('Backend sync failed:', err)
-      setIsLoadingFamily(false)
-      setIsLoadingMemories(false)
-      setIsLoadingMedicines(false)
-      setIsLoadingPeople(false)
-      setIsLoadingAlbums(false)
+      console.warn('Partial backend sync failed:', err)
     }
-  }, [])
+  }
 
   useEffect(() => {
     refreshFromBackend()
@@ -195,17 +177,24 @@ export function AppStateProvider({ children }) {
       }
     }, 30000)
     return () => clearInterval(interval)
-  }, [refreshFromBackend])
+  }, [])
 
-  // ── Toast helper ────────────────────────────────────
   const showToast = (message, type = 'info') => {
     setToast({ id: Date.now(), message, type })
     setTimeout(() => setToast(null), 3500)
   }
 
-  // ── Memories CRUD ───────────────────────────────────
+  // ── Memories CRUD (API-backed, local fallback) ───────────────────
   const saveMemoryAlbum = async (albumData) => {
-    try {
+    if (backendOnline && !String(albumData.id).startsWith('mem-')) {
+      // update existing backend memory
+      await api.createMemory({
+        title: albumData.title,
+        description: albumData.description,
+        category: CATEGORY_TO_BACKEND[albumData.category] || 'story',
+        event_date: albumData.year ? `${albumData.year}-01-01` : null,
+      })
+    } else if (backendOnline) {
       const created = await api.createMemory({
         title: albumData.title,
         description: albumData.description,
@@ -213,125 +202,60 @@ export function AppStateProvider({ children }) {
         event_date: albumData.year ? `${albumData.year}-01-01` : null,
       })
       setMemoryAlbums((prev) => [mapBackendMemory(created), ...prev])
-      showToast('Memory saved', 'success')
       return created
-    } catch (err) {
-      // Offline fallback
-      const offlineItem = {
-        ...albumData,
-        id: albumData.id || `mem-${Date.now()}`,
-        categoryVariant: CATEGORY_VARIANTS[albumData.category] || 'primary',
-      }
-      setMemoryAlbums((prev) => [offlineItem, ...prev])
-      showToast('Saved locally (backend offline)', 'info')
-      return offlineItem
     }
+    // offline / legacy-mock path
+    setMemoryAlbums((prev) =>
+      prev.map((a) => (a.id === albumData.id ? albumData : a)).concat(
+        prev.some((a) => a.id === albumData.id) ? [] : [{ ...albumData, id: albumData.id || `mem-${Date.now()}` }]
+      )
+    )
   }
 
   const deleteMemoryAlbum = async (id) => {
-    try {
-      await api.deleteMemory(id)
-    } catch (err) {
-      showToast('Failed to delete on server', 'error')
-      return
+    if (backendOnline && !String(id).startsWith('mem-')) {
+      try { await api.deleteMemory(id) } catch (err) { showToast('Failed to delete on server', 'error'); return }
     }
     setMemoryAlbums((prev) => prev.filter((a) => a.id !== id))
-    showToast('Memory deleted', 'info')
   }
 
-  // ── Emergency contacts / Family CRUD ────────────────
+  // ── Emergency contacts CRUD ──────────────────────────────────────
   const saveFamilyMember = async (memberData) => {
-    try {
-      if (memberData.id && !String(memberData.id).startsWith('fam-')) {
-        const updated = await api.updateEmergencyContact(memberData.id, {
-          name: memberData.name,
-          relationship: memberData.relationship,
-          phone: memberData.phone,
-          is_primary: !!memberData.is_primary,
-        })
-        setFamilyMembers((prev) => prev.map((m) => (m.id === memberData.id ? mapBackendContact(updated) : m)))
-        showToast('Contact updated', 'success')
-      } else {
-        const created = await api.createEmergencyContact({
-          name: memberData.name,
-          relationship: memberData.relationship,
-          phone: memberData.phone,
-          is_primary: !!memberData.is_primary,
-        })
-        setFamilyMembers((prev) => [...prev, mapBackendContact(created)])
-        showToast('Contact added', 'success')
-      }
-    } catch (err) {
-      // Offline fallback
-      const offlineItem = { ...memberData, id: memberData.id || `fam-${Date.now()}` }
+    if (!backendOnline) {
       setFamilyMembers((prev) =>
-        prev.map((m) => (m.id === memberData.id ? offlineItem : m)).concat(
-          prev.some((m) => m.id === memberData.id) ? [] : [offlineItem]
+        prev.map((m) => (m.id === memberData.id ? memberData : m)).concat(
+          prev.some((m) => m.id === memberData.id) ? [] : [{ ...memberData, id: memberData.id || `fam-${Date.now()}` }]
         )
       )
-      showToast('Saved locally (backend offline)', 'info')
+      return
+    }
+    if (memberData.id && !String(memberData.id).startsWith('fam-')) {
+      const updated = await api.updateEmergencyContact(memberData.id, {
+        name: memberData.name,
+        relationship: memberData.relationship,
+        phone: memberData.phone,
+        is_primary: !!memberData.is_primary,
+      })
+      setFamilyMembers((prev) => prev.map((m) => (m.id === memberData.id ? mapBackendContact(updated) : m)))
+    } else {
+      const created = await api.createEmergencyContact({
+        name: memberData.name,
+        relationship: memberData.relationship,
+        phone: memberData.phone,
+        is_primary: !!memberData.is_primary,
+      })
+      setFamilyMembers((prev) => [...prev, mapBackendContact(created)])
     }
   }
 
   const deleteFamilyMember = async (id) => {
-    try {
-      await api.deleteEmergencyContact(id)
-    } catch (err) {
-      showToast('Failed to delete on server', 'error')
-      return
+    if (backendOnline && !String(id).startsWith('fam-')) {
+      try { await api.deleteEmergencyContact(id) } catch (err) { showToast('Failed to delete on server', 'error'); return }
     }
     setFamilyMembers((prev) => prev.filter((m) => m.id !== id))
-    showToast('Contact removed', 'info')
   }
 
-  // ── Albums CRUD ─────────────────────────────────────
-  const saveAlbum = async (albumData) => {
-    try {
-      if (albumData.id && !String(albumData.id).startsWith('alb-')) {
-        const updated = await api.updateAlbum(albumData.id, {
-          title: albumData.title,
-          description: albumData.description,
-          date: albumData.date,
-          people_ids: albumData.people_ids || [],
-          photo_urls: albumData.photo_urls || [],
-          featured_memory_id: albumData.featured_memory_id || null,
-        })
-        setAlbums((prev) => prev.map((a) => (a.id === albumData.id ? updated : a)))
-        showToast('Album updated', 'success')
-        return updated
-      } else {
-        const created = await api.createAlbum({
-          title: albumData.title,
-          description: albumData.description || '',
-          date: albumData.date || null,
-          people_ids: albumData.people_ids || [],
-          photo_urls: albumData.photo_urls || [],
-          featured_memory_id: albumData.featured_memory_id || null,
-        })
-        setAlbums((prev) => [created, ...prev])
-        showToast('Album created', 'success')
-        return created
-      }
-    } catch (err) {
-      const offlineItem = { ...albumData, id: albumData.id || `alb-${Date.now()}` }
-      setAlbums((prev) => [offlineItem, ...prev])
-      showToast('Saved locally (backend offline)', 'info')
-      return offlineItem
-    }
-  }
-
-  const deleteAlbum = async (id) => {
-    try {
-      await api.deleteAlbum(id)
-    } catch (err) {
-      showToast('Failed to delete on server', 'error')
-      return
-    }
-    setAlbums((prev) => prev.filter((a) => a.id !== id))
-    showToast('Album deleted', 'info')
-  }
-
-  // ── Auth functions ──────────────────────────────────
+  // Auth & Sign Up Functions
   const login = (targetRole = 'caregiver', userName) => {
     setIsAuthenticated(true)
     setUserRole(targetRole)
@@ -339,7 +263,11 @@ export function AppStateProvider({ children }) {
     if (userName) {
       setActivePatient((prev) => ({ ...prev, name: userName }))
     }
-    setCurrentView(targetRole === 'caregiver' ? 'dashboard' : 'patient-home')
+    if (targetRole === 'caregiver') {
+      setCurrentView('dashboard')
+    } else {
+      setCurrentView('patient-home')
+    }
     showToast(`Welcome back${userName ? `, ${userName}` : ''}!`, 'success')
     refreshFromBackend()
   }
@@ -349,10 +277,16 @@ export function AppStateProvider({ children }) {
     const targetRole = role === 'patient' ? 'patient' : 'caregiver'
     setUserRole(targetRole)
     setMode(targetRole)
-    setActivePatient((prev) => ({ ...prev, name: fullName || 'User' }))
-    setCurrentView(targetRole === 'caregiver' ? 'dashboard' : 'patient-home')
-    showToast(`Account created for ${fullName || 'User'}! Welcome to NeuroTwin.`, 'success')
-    refreshFromBackend()
+    setActivePatient((prev) => ({
+      ...prev,
+      name: fullName || 'User',
+    }))
+    if (targetRole === 'caregiver') {
+      setCurrentView('dashboard')
+    } else {
+      setCurrentView('patient-home')
+    }
+    showToast(`Account created successfully for ${fullName || 'User'}! Welcome to NeuroTwin.`, 'success')
   }
 
   const logout = () => {
@@ -366,12 +300,15 @@ export function AppStateProvider({ children }) {
 
   const switchRole = (newRole) => {
     if (!isAuthenticated) return
-    if (userRole === 'patient') return // Patients cannot switch roles
     setUserRole(newRole)
     setMode(newRole)
     setProfileMenuOpen(false)
-    setCurrentView(newRole === 'caregiver' ? 'dashboard' : 'patient-home')
-    showToast(`Switched to ${newRole === 'caregiver' ? 'Caregiver Portal' : 'Patient Companion'}`, 'info')
+    if (newRole === 'caregiver') {
+      setCurrentView('dashboard')
+    } else {
+      setCurrentView('patient-home')
+    }
+    showToast(`Switched view to ${newRole === 'caregiver' ? 'Caregiver Portal' : 'Patient Digital Companion'}`, 'info')
   }
 
   const navigateTo = (viewKey) => {
@@ -382,35 +319,43 @@ export function AppStateProvider({ children }) {
   return (
     <AppStateContext.Provider
       value={{
-        // Auth
-        isAuthenticated, login, signUp, logout,
-        mode, userRole, switchRole,
-        currentView, navigateTo,
-        // UI
-        isDarkMode, setIsDarkMode,
-        fontScale, setFontScale,
-        searchOpen, setSearchOpen,
-        audioRecorderOpen, setAudioRecorderOpen,
-        addMemoryOpen, setAddMemoryOpen,
-        profileMenuOpen, setProfileMenuOpen,
-        toast, showToast,
-        // Patient context
-        activePatient, setActivePatient,
-        // Data
-        familyMembers, setFamilyMembers,
-        memoryAlbums, setMemoryAlbums,
-        medicines, registeredPeople,
-        albums, setAlbums,
-        // Backend status
-        backendOnline, systemHealth,
-        // Loading
-        isLoadingFamily, isLoadingMemories, isLoadingMedicines,
-        isLoadingPeople, isLoadingAlbums, isLoadingHealth,
-        // Actions
+        isAuthenticated,
+        login,
+        signUp,
+        logout,
+        mode,
+        switchRole,
+        currentView,
+        navigateTo,
+        isDarkMode,
+        setIsDarkMode,
+        fontScale,
+        setFontScale,
+        activePatient,
+        setActivePatient,
+        searchOpen,
+        setSearchOpen,
+        audioRecorderOpen,
+        setAudioRecorderOpen,
+        addMemoryOpen,
+        setAddMemoryOpen,
+        profileMenuOpen,
+        setProfileMenuOpen,
+        toast,
+        showToast,
+        familyMembers,
+        setFamilyMembers,
+        memoryAlbums,
+        setMemoryAlbums,
+        medicines,
+        registeredPeople,
+        backendOnline,
+        systemHealth,
         refreshFromBackend,
-        saveMemoryAlbum, deleteMemoryAlbum,
-        saveFamilyMember, deleteFamilyMember,
-        saveAlbum, deleteAlbum,
+        saveMemoryAlbum,
+        deleteMemoryAlbum,
+        saveFamilyMember,
+        deleteFamilyMember,
       }}
     >
       {children}

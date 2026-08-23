@@ -1,179 +1,222 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useAppState } from '../../context/AppStateContext'
+import { AISummaryPanel } from '../common/AISummaryPanel'
+import { InsightCard } from '../common/InsightCard'
+import { CognitiveTrendChart } from '../common/CognitiveTrendChart'
+import { SessionCard } from '../common/SessionCard'
+import { ReminderCard } from '../common/ReminderCard'
+import { FamilyCard } from '../common/FamilyCard'
 
 export function CaregiverDashboard() {
-  const {
-    activePatient, navigateTo, showToast, setAddMemoryOpen,
-    backendOnline, systemHealth, familyMembers, memoryAlbums, medicines,
-    isLoadingMemories, isLoadingFamily, isLoadingHealth,
-  } = useAppState()
+  const { activePatient, navigateTo, setAudioRecorderOpen, setAddMemoryOpen, showToast } = useAppState()
 
-  const recallIndex = systemHealth?.system_metrics?.qdrant_vectors?.people ?? 0
-  const objectsTracked = systemHealth?.system_metrics?.qdrant_vectors?.objects ?? 0
+  const [reminders, setReminders] = useState([
+    { id: 1, time: '08:00 AM', title: 'Morning Medication & Breakfast', description: 'Aricept 10mg + Warm Oatmeal', status: 'completed' },
+    { id: 2, time: '10:30 AM', title: 'Garden Walk & Audio Cue', description: '1974 Lake Tahoe Memory Dictation', status: 'completed' },
+    { id: 3, time: '02:00 PM', title: 'Piano Music Memory Session', description: 'Chopin Nocturne in E-Flat', status: 'upcoming' },
+    { id: 4, time: '05:30 PM', title: 'Family Video Call with Sarah', description: 'Evening check-in & photo review', status: 'upcoming' },
+  ])
+
+  const toggleReminder = (id) => {
+    setReminders((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? { ...r, status: r.status === 'completed' ? 'upcoming' : 'completed' }
+          : r
+      )
+    )
+    showToast('Updated routine status', 'info')
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-      {/* Patient Header */}
-      <section className="nt-card" style={{
-        background: 'linear-gradient(135deg, var(--nt-surface-lowest), var(--nt-surface-low))',
-        padding: 'var(--sp-lg)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ position: 'relative' }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: 'var(--r-xl)',
-              background: 'var(--nt-primary-fixed)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 24, fontWeight: 700, color: 'var(--nt-primary)',
-              border: '3px solid var(--nt-surface-lowest)',
-            }}>
-              {activePatient.name ? activePatient.name.charAt(0) : 'P'}
-            </div>
-            <span style={{
-              position: 'absolute', bottom: -2, right: -2,
-              width: 16, height: 16, borderRadius: '50%',
-              background: 'var(--nt-success)', border: '3px solid var(--nt-surface-lowest)',
-            }} />
+    <div className="space-y-lg">
+      {/* Clinical Patient Header Banner */}
+      <section className="premium-card p-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-none shadow-sm bg-gradient-to-r from-surface-container-lowest via-surface-container-low to-slate-100 dark:from-slate-800 dark:to-slate-800/80">
+        <div className="flex items-center gap-xl">
+          <div className="relative">
+            <img
+              src={activePatient.avatar}
+              alt={activePatient.name}
+              className="w-24 h-24 rounded-2xl object-cover shadow-md border-4 border-white dark:border-slate-700"
+            />
+            <div className="absolute -bottom-2 -right-2 bg-emerald-500 border-4 border-white dark:border-slate-700 w-6 h-6 rounded-full animate-pulse" />
           </div>
-          <div style={{ flex: 1 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--nt-primary)', letterSpacing: '-0.01em' }}>
-              {activePatient.name || 'Patient'}
-            </h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-              <span className="nt-badge nt-badge-success">Active & Stable</span>
-              <span style={{ fontSize: 12, color: 'var(--nt-on-surface-variant)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>sync</span>
-                {backendOnline ? 'Live' : 'Offline'}
+
+          <div>
+            <div className="flex items-center gap-md">
+              <h2 className="text-3xl font-bold tracking-tight text-primary dark:text-primary-fixed">{activePatient.name}</h2>
+              <span className="px-3 py-1 bg-surface-container-high dark:bg-slate-700 rounded-full text-xs font-bold text-on-surface-variant dark:text-slate-200 uppercase tracking-widest">
+                Stage 2 • Early Alzheimer's
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-base mt-2">
+              <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">● Live Care Monitoring</span>
+              <span className="w-1.5 h-1.5 bg-outline-variant rounded-full" />
+              <span className="text-sm text-on-surface-variant dark:text-slate-300 font-medium">
+                Location: {activePatient.location}
+              </span>
+              <span className="w-1.5 h-1.5 bg-outline-variant rounded-full" />
+              <span className="text-sm text-on-surface-variant dark:text-slate-300 font-medium">
+                Primary Caregiver: {activePatient.primaryCaregiver}
               </span>
             </div>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-          <button className="nt-btn nt-btn-primary" onClick={() => setAddMemoryOpen(true)} style={{ flex: 1, fontSize: 13 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_circle</span>
-            Add Memory
+        <div className="flex items-center gap-md sm:gap-xl shrink-0">
+          <button
+            onClick={() => setAudioRecorderOpen(true)}
+            className="bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary px-lg py-3 rounded-xl flex items-center gap-md font-bold shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer"
+          >
+            <span className="material-symbols-outlined">mic</span>
+            <span className="text-sm tracking-premium">Record Audio Cue</span>
           </button>
-          <button className="nt-btn nt-btn-secondary" onClick={() => navigateTo('ai-assistant')} style={{ flex: 1, fontSize: 13 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>smart_toy</span>
-            AI Assistant
+
+          <button
+            onClick={() => setAddMemoryOpen(true)}
+            className="bg-primary dark:bg-primary-fixed text-on-primary dark:text-primary px-lg py-3 rounded-xl flex items-center gap-md font-bold shadow-sm hover:shadow-md transition-all active:scale-95 cursor-pointer"
+          >
+            <span className="material-symbols-outlined">add_circle</span>
+            <span className="text-sm tracking-premium">Add Memory</span>
           </button>
         </div>
       </section>
 
-      {/* Metric Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--sp-sm)' }}>
-        {[
-          { label: 'Memories', value: memoryAlbums.length, icon: 'psychology', color: 'var(--nt-primary)' },
-          { label: 'Family', value: familyMembers.length, icon: 'group', color: 'var(--nt-secondary)' },
-          { label: 'Medications', value: medicines.length, icon: 'medication', color: 'var(--nt-success)' },
-          { label: 'People Indexed', value: recallIndex, icon: 'face', color: 'var(--nt-tertiary)' },
-        ].map((m, i) => (
-          <div key={i} className="nt-card" style={{ padding: 'var(--sp-md)', textAlign: 'center' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 24, color: m.color }}>{m.icon}</span>
-            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--nt-on-surface)', marginTop: 4 }}>{m.value}</div>
-            <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--nt-on-surface-variant)', letterSpacing: '0.02em' }}>{m.label}</div>
-          </div>
-        ))}
+      {/* AI Daily Memory Synthesis Panel */}
+      <AISummaryPanel patientName={activePatient.name} onActionClick={() => navigateTo('ai-assistant')} />
+
+      {/* Clinical AI Insight Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-lg">
+        <InsightCard
+          title="Recall Confidence"
+          metric="84%"
+          change="+4.2%"
+          trend="up"
+          category="AI Score"
+          icon="psychology"
+          description="High emotional resonance detected during family photo reviews."
+        />
+
+        <InsightCard
+          title="Verbal Fluency"
+          metric="78/100"
+          change="+2.8%"
+          trend="up"
+          category="Language"
+          icon="record_voice_over"
+          description="Morning speech clarity score verified in optimal threshold."
+        />
+
+        <InsightCard
+          title="Mood Stability"
+          metric="92%"
+          change="Consistent"
+          trend="up"
+          category="Behavioral"
+          icon="mood"
+          description="Zero agitation episodes recorded over last 48 hours."
+        />
+
+        <InsightCard
+          title="Safety Alerts"
+          metric="0 Active"
+          change="All Clear"
+          trend="up"
+          category="Safety"
+          icon="shield"
+          description="Ambient motion sensors & wearable telemetry operating normally."
+        />
       </div>
 
-      {/* System Health */}
-      {systemHealth && (
-        <section className="nt-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--nt-on-surface)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>router</span>
-              Device Status
-            </h3>
-            <span className="nt-badge nt-badge-success">Online</span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-            {[
-              { icon: 'dns', label: 'FastAPI', value: 'Healthy' },
-              { icon: 'database', label: 'Qdrant', value: systemHealth.components?.qdrant_vector_db || '—' },
-              { icon: 'memory', label: 'CPU', value: `${systemHealth.system_metrics?.cpu_percent || 0}%` },
-              { icon: 'storage', label: 'Memory', value: `${systemHealth.system_metrics?.memory_used_gb || 0} GB` },
-            ].map((s, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--nt-on-surface-variant)' }}>{s.icon}</span>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--nt-on-surface-variant)', letterSpacing: '0.02em' }}>{s.label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--nt-on-surface)' }}>{s.value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Recent Memories */}
-      <section className="nt-card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--nt-on-surface)' }}>Recent Memories</h3>
-          <button onClick={() => navigateTo('memories')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--nt-primary)', fontFamily: 'Inter, sans-serif' }}>View All →</button>
+      {/* Main Bento Grid */}
+      <div className="bento-grid">
+        {/* Cognitive Vitality Interactive Chart */}
+        <div className="col-span-12 lg:col-span-6">
+          <CognitiveTrendChart title="Cognitive Vitality & Trajectory" />
         </div>
-        {isLoadingMemories ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[1,2].map(i => <div key={i} className="nt-skeleton" style={{ height: 56 }} />)}
-          </div>
-        ) : memoryAlbums.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {memoryAlbums.slice(0, 3).map((m) => (
-              <div key={m.id} style={{
-                padding: 12, borderRadius: 'var(--r-md)', border: '1px solid var(--nt-outline-variant)',
-                display: 'flex', alignItems: 'center', gap: 12,
-              }}>
-                <span className="nt-badge nt-badge-info">{m.category}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--nt-on-surface)' }}>{m.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--nt-on-surface-variant)' }}>{m.year}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="nt-empty" style={{ padding: 'var(--sp-lg)' }}>
-            <span className="material-symbols-outlined nt-empty-icon">psychology</span>
-            <p className="nt-empty-desc">No memories yet. Add your first memory to get started.</p>
-          </div>
-        )}
-      </section>
 
-      {/* Family Quick View */}
-      <section className="nt-card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--nt-on-surface)' }}>Inner Circle</h3>
-          <button onClick={() => navigateTo('family')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--nt-primary)', fontFamily: 'Inter, sans-serif' }}>
-            Manage ({familyMembers.length}) →
-          </button>
+        {/* System Logs & Active Sessions */}
+        <div className="col-span-12 lg:col-span-6 premium-card p-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-lg">
+            <h3 className="text-lg font-bold text-primary dark:text-primary-fixed tracking-tight">Active Memory Sessions & Logs</h3>
+            <button onClick={() => navigateTo('memories')} className="text-xs text-primary font-bold hover:underline">
+              View All ➔
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <SessionCard
+              title="1970s Acoustic Guitar Memory Cue"
+              time="LIVE NOW"
+              notes="AI stimulated recall through 1970s acoustic folk playlist. Verbal responses recorded."
+              responsiveness="High (91%)"
+              icon="music_note"
+            />
+
+            <SessionCard
+              title="Morning Hygiene & Breakfast Routine"
+              time="09:15 AM"
+              notes="All morning hydration and nutrition goals completed independently. Mood score: 9/10."
+              responsiveness="Optimal (100%)"
+              icon="task_alt"
+            />
+          </div>
         </div>
-        {familyMembers.length > 0 ? (
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }} className="hide-scrollbar">
-            {familyMembers.slice(0, 4).map((f) => (
-              <div key={f.id} style={{
-                minWidth: 140, padding: 12, borderRadius: 'var(--r-md)',
-                border: '1px solid var(--nt-outline-variant)', textAlign: 'center', flexShrink: 0,
-              }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: '50%', margin: '0 auto 8px',
-                  background: 'var(--nt-primary-fixed)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 16, fontWeight: 700, color: 'var(--nt-primary)',
-                }}>
-                  {f.name.charAt(0)}
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--nt-on-surface)' }}>{f.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--nt-on-surface-variant)' }}>{f.relationship}</div>
-              </div>
+
+        {/* Upcoming Reminders Checklist */}
+        <div className="col-span-12 lg:col-span-6 premium-card p-xl">
+          <div className="flex items-center justify-between mb-xl">
+            <h3 className="text-lg font-bold text-primary dark:text-primary-fixed tracking-tight">Care Routine & Reminders</h3>
+            <span className="px-3 py-1 bg-surface-container-high rounded-full text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+              Today: Jul 23
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {reminders.map((r) => (
+              <ReminderCard
+                key={r.id}
+                time={r.time}
+                title={r.title}
+                description={r.description}
+                status={r.status}
+                onToggle={() => toggleReminder(r.id)}
+              />
             ))}
           </div>
-        ) : (
-          <div className="nt-empty" style={{ padding: 'var(--sp-md)' }}>
-            <p className="nt-empty-desc">No family members added yet.</p>
+        </div>
+
+        {/* Inner Circle & Family Connections */}
+        <div className="col-span-12 lg:col-span-6 premium-card p-xl">
+          <div className="flex items-center justify-between mb-xl">
+            <h3 className="text-lg font-bold text-primary dark:text-primary-fixed tracking-tight">Inner Circle Recognition</h3>
+            <button onClick={() => navigateTo('family')} className="text-xs text-primary font-bold hover:underline">
+              Manage Care Circle (#6) ➔
+            </button>
           </div>
-        )}
-      </section>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-lg">
+            <FamilyCard
+              name="Sarah Vance"
+              relationship="Daughter • Primary Caregiver"
+              avatar="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=256&q=80"
+              contributions="48"
+              onCall={() => showToast('Calling Sarah Vance...', 'info')}
+            />
+
+            <FamilyCard
+              name="David Vance"
+              relationship="Son • Contributor"
+              avatar="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=256&q=80"
+              contributions="32"
+              onCall={() => showToast('Calling David Vance...', 'info')}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
+

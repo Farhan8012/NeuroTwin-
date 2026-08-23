@@ -1,165 +1,196 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState } from 'react'
+import { Button } from './UIPrimitives'
+import { useAppState } from '../../context/AppStateContext'
 import { api } from '../../lib/api'
 
-export function AIChatWidget({ patientName = "the patient", isPatientView = true }) {
+export function AIChatWidget({ patientName = 'Eleanor', isPatientView = false }) {
+  const { backendOnline, systemHealth, showToast } = useAppState()
+
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: isPatientView ? `Hello ${patientName.split(' ')[0]}. How can I help you today?` : `I'm ready to provide insights on ${patientName}.` }
+    {
+      id: 1,
+      sender: 'ai',
+      text: isPatientView
+        ? `Hello ${patientName}! I'm your NeuroTwin companion. Ask me about your family, your memories, or where you left something — I remember with you.`
+        : `Hello! I'm connected to the live NeuroTwin engine (Qdrant + Ollama). Ask me anything about ${patientName}'s registered faces, memories, medications, or object locations.`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      suggestedPrompts: isPatientView
+        ? ['Who is my daughter?', 'Where are my glasses?', 'Tell me a happy memory']
+        : ['Who did the patient see today?', 'Where are the reading glasses?', 'What medicines are scheduled?'],
+    },
   ])
+
   const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const messagesEndRef = useRef(null)
+  const [isThinking, setIsThinking] = useState(false)
+  const [playingId, setPlayingId] = useState(null)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  const handleSend = async (e) => {
-    e?.preventDefault()
-    if (!input.trim() || isLoading) return
-
-    const query = input.trim()
-    setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: query }])
-    setIsLoading(true)
-
+  const playTTS = async (msg) => {
+    if (!msg.audioUrl) return
     try {
-      const response = await api.voiceQuery(query)
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: response.text,
-        audio: response.audio_url 
-      }])
-      
-      // Auto-play audio if in patient mode
-      if (isPatientView && response.audio_url) {
-        const audio = new Audio(api.audioUrl(response.audio_url))
-        audio.play().catch(e => console.log('Audio autoplay prevented:', e))
-      }
-    } catch (err) {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "I'm having trouble connecting right now. Please try again later.",
-        error: true
-      }])
-    } finally {
-      setIsLoading(false)
+      setPlayingId(msg.id)
+      const audio = new Audio(msg.audioUrl)
+      audio.onended = () => setPlayingId(null)
+      audio.onerror = () => { setPlayingId(null); showToast('Audio playback failed', 'error') }
+      await audio.play()
+    } catch {
+      setPlayingId(null)
     }
   }
 
+  const handleSend = async (textToSend) => {
+    const text = (textToSend || input).trim()
+    if (!text || isThinking) return
+
+    const userMsg = {
+      id: Date.now(),
+      sender: 'user',
+      text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }
+
+    setMessages((prev) => [...prev, userMsg])
+    if (!textToSend) setInput('')
+    setIsThinking(true)
+
+    if (!backendOnline) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: 'ai',
+          text: "I can't reach the NeuroTwin server right now. Please make sure the backend is running on port 8000 and try again.",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ])
+      setIsThinking(false)
+      return
+    }
+
+    try {
+      const res = await api.voiceQuery(text)
+      const aiMsg = {
+        id: Date.now() + 1,
+        sender: 'ai',
+        text: res.llm_response || res.response || '(empty response)',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        audioUrl: api.audioUrl(res.tts_audio_url),
+        persona: res.persona,
+      }
+      setMessages((prev) => [...prev, aiMsg])
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: 'ai',
+          text: `Sorry, the memory engine hit an error (${err.message}). Please try again.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ])
+    } finally {
+      setIsThinking(false)
+    }
+  }
+
+  const components = systemHealth?.components
+
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', height: '100%',
-      background: 'var(--nt-surface-lowest)', borderRadius: 'var(--r-xl)',
-      border: '1px solid var(--nt-outline-variant)', overflow: 'hidden'
-    }}>
+    <div className="flex flex-col h-full bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
       {/* Header */}
-      <div style={{
-        padding: '12px 16px', background: 'var(--nt-surface-low)',
-        borderBottom: '1px solid var(--nt-outline-variant)',
-        display: 'flex', alignItems: 'center', gap: 12
-      }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: '50%',
-          background: 'var(--nt-primary)', color: 'white',
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>psychology_alt</span>
-        </div>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--nt-on-surface)' }}>NeuroTwin</div>
-          <div style={{ fontSize: 11, color: 'var(--nt-success)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} /> Online
+      <div className="p-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#2B6CB0] to-[#38B2AC] flex items-center justify-center text-white text-xs font-bold">
+            ✨
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">NeuroTwin AI Memory Engine</h4>
+            <p className={`text-[11px] font-medium ${backendOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+              ● {backendOnline ? 'Live • Qdrant + LLM + TTS' : 'Offline — backend unreachable'}
+            </p>
           </div>
         </div>
+        {components && (
+          <div className="hidden sm:flex gap-1.5">
+            {['qdrant_vector_db', 'ollama_llm', 'whisper_stt', 'tts_piper'].map((k) => (
+              <span
+                key={k}
+                title={`${k}: ${components[k]}`}
+                className={`w-2 h-2 rounded-full ${
+                  String(components[k]).match(/connected|active|ready/) ? 'bg-emerald-400' : 'bg-red-400'
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Messages */}
-      <div style={{
-        flex: 1, overflowY: 'auto', padding: '16px',
-        display: 'flex', flexDirection: 'column', gap: 16
-      }}>
-        {messages.map((m, i) => (
-          <div key={i} style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: m.role === 'user' ? 'flex-end' : 'flex-start'
-          }}>
-            <div style={{
-              maxWidth: '85%', padding: '12px 16px',
-              borderRadius: m.role === 'user' ? '16px 16px 0 16px' : '16px 16px 16px 0',
-              background: m.role === 'user' ? 'var(--nt-primary)' : 'var(--nt-surface-high)',
-              color: m.role === 'user' ? 'white' : 'var(--nt-on-surface)',
-              border: m.role === 'assistant' && m.error ? '1px solid var(--nt-error)' : 'none',
-              fontSize: isPatientView ? 16 : 14, lineHeight: 1.5
-            }}>
-              {m.content}
+      {/* Messages Scroll View */}
+      <div className="flex-1 p-4 overflow-y-auto space-y-4 min-h-[300px]">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
+            <div
+              className={`max-w-[82%] p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+                msg.sender === 'user'
+                  ? 'bg-[#2B6CB0] text-white rounded-br-none'
+                  : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-bl-none border border-slate-200 dark:border-slate-600'
+              }`}
+            >
+              {msg.text}
             </div>
-            {m.audio && (
-              <button 
-                onClick={() => new Audio(api.audioUrl(m.audio)).play()}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 4, marginTop: 4,
-                  fontSize: 12, color: 'var(--nt-primary)', fontWeight: 600
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>volume_up</span> Play Audio
-              </button>
+
+            <div className="flex items-center gap-2 mt-1 px-1">
+              <span className="text-[10px] text-slate-400">{msg.timestamp}</span>
+              {msg.audioUrl && (
+                <button
+                  onClick={() => playTTS(msg)}
+                  disabled={playingId === msg.id}
+                  className="text-[10px] font-semibold text-[#2B6CB0] hover:text-[#38B2AC] transition"
+                >
+                  {playingId === msg.id ? '🔊 playing…' : '▶ play voice'}
+                </button>
+              )}
+            </div>
+
+            {/* Prompt Chips */}
+            {msg.suggestedPrompts && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {msg.suggestedPrompts.map((prompt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleSend(prompt)}
+                    className="px-3 py-1 bg-[#EBF8FF] dark:bg-[#2B6CB0]/20 text-[#2B6CB0] dark:text-[#63B3ED] text-xs font-semibold rounded-full border border-[#BEE3F8] dark:border-[#2B6CB0]/40 hover:bg-[#BEE3F8]/50 transition"
+                  >
+                    💬 {prompt}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         ))}
-        {isLoading && (
-          <div style={{ alignSelf: 'flex-start', padding: '12px 16px', borderRadius: '16px 16px 16px 0', background: 'var(--nt-surface-high)' }}>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--nt-outline)', animation: 'fadeIn 1s infinite alternate' }} />
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--nt-outline)', animation: 'fadeIn 1s infinite alternate 0.2s' }} />
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--nt-outline)', animation: 'fadeIn 1s infinite alternate 0.4s' }} />
-            </div>
+
+        {isThinking && (
+          <div className="flex items-center gap-2 p-3 bg-slate-100 dark:bg-slate-700/60 rounded-2xl w-24">
+            <div className="w-2 h-2 rounded-full bg-[#2B6CB0] animate-bounce" />
+            <div className="w-2 h-2 rounded-full bg-[#38B2AC] animate-bounce delay-100" />
+            <div className="w-2 h-2 rounded-full bg-[#D69E2E] animate-bounce delay-200" />
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSend} style={{
-        padding: '12px', borderTop: '1px solid var(--nt-outline-variant)',
-        display: 'flex', gap: 8, background: 'var(--nt-surface-lowest)'
-      }}>
-        <button type="button" onClick={() => setIsRecording(!isRecording)} style={{
-          width: 44, height: 44, borderRadius: '50%', border: 'none', flexShrink: 0,
-          background: isRecording ? 'var(--nt-error-container)' : 'var(--nt-surface-low)',
-          color: isRecording ? 'var(--nt-error)' : 'var(--nt-on-surface-variant)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-          transition: 'all 0.2s ease'
-        }}>
-          <span className="material-symbols-outlined">{isRecording ? 'mic' : 'mic_none'}</span>
-        </button>
+      {/* Input Bar */}
+      <div className="p-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex items-center gap-2">
         <input
           type="text"
           value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder={isRecording ? "Listening..." : "Type a message..."}
-          disabled={isLoading || isRecording}
-          style={{
-            flex: 1, padding: '0 16px', borderRadius: 22, border: '1px solid var(--nt-outline-variant)',
-            background: 'var(--nt-surface-low)', color: 'var(--nt-on-surface)',
-            fontSize: 15, outline: 'none', minWidth: 0
-          }}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          placeholder={isPatientView ? "Ask me anything..." : "Query the live memory engine..."}
+          className="flex-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs sm:text-sm outline-none focus:border-[#2B6CB0]"
         />
-        <button type="submit" disabled={!input.trim() || isLoading} style={{
-          width: 44, height: 44, borderRadius: '50%', border: 'none', flexShrink: 0,
-          background: input.trim() ? 'var(--nt-primary)' : 'var(--nt-surface-high)',
-          color: input.trim() ? 'white' : 'var(--nt-outline-variant)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-          transition: 'all 0.2s ease'
-        }}>
-          <span className="material-symbols-outlined">send</span>
-        </button>
-      </form>
+        <Button size="sm" onClick={() => handleSend()} disabled={isThinking}>
+          Send ➔
+        </Button>
+      </div>
     </div>
   )
 }

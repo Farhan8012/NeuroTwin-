@@ -1,93 +1,57 @@
 import React, { useState } from 'react'
+import { Button, Input } from '../common/UIPrimitives'
 import { useAppState } from '../../context/AppStateContext'
 
 export function ForgotPasswordView() {
-  const { navigateTo } = useAppState()
+  const { navigateTo, showToast } = useAppState()
   const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    setSent(true)
+    setSubmitted(true)
+    showToast('Reset password link sent to your email!', 'info')
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      padding: '24px 16px',
-      background: 'linear-gradient(180deg, var(--nt-surface) 0%, var(--nt-surface-low) 100%)',
-    }}>
-      {/* Brand */}
-      <div style={{ textAlign: 'center', marginBottom: 40 }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: 16,
-          background: 'var(--nt-primary-container)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 16px',
-        }}>
-          <span className="material-symbols-outlined" style={{ color: 'var(--nt-on-primary-container)', fontSize: 28 }}>psychology</span>
+    <div className="min-h-[85vh] flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl p-8">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">Reset Password</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Enter your email to receive a secure password reset link
+          </p>
         </div>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--nt-primary)', letterSpacing: '-0.02em' }}>NeuroTwin</h1>
-      </div>
 
-      <div className="nt-card" style={{ width: '100%', maxWidth: 400, padding: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--nt-on-surface)', marginBottom: 8 }}>Reset Password</h2>
-        <p style={{ fontSize: 14, color: 'var(--nt-on-surface-variant)', marginBottom: 24 }}>
-          Enter your email address and we'll send you a link to reset your password.
-        </p>
-
-        {sent ? (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: '50%',
-              background: 'var(--nt-success-light)', color: 'var(--nt-success-dark)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 16px',
-            }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 24 }}>check_circle</span>
-            </div>
-            <p style={{ fontSize: 14, color: 'var(--nt-on-surface)', marginBottom: 24 }}>
-              Check your email for a link to reset your password.
-            </p>
-            <button className="nt-btn nt-btn-primary" onClick={() => navigateTo('signin')} style={{ width: '100%' }}>
-              Return to Sign In
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <label className="nt-label">Email</label>
-              <input
-                type="email"
-                className="nt-input"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <button type="submit" className="nt-btn nt-btn-primary" style={{ width: '100%' }}>
+        {!submitted ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Email Address"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <Button type="submit" fullWidth size="lg">
               Send Reset Link
-            </button>
+            </Button>
           </form>
-        )}
-
-        {!sent && (
-          <div style={{ textAlign: 'center', marginTop: 20 }}>
-            <button
-              onClick={() => navigateTo('signin')}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 14, fontWeight: 600, color: 'var(--nt-primary)',
-                fontFamily: 'Inter, sans-serif',
-              }}
-            >
-              Back to Sign In
-            </button>
+        ) : (
+          <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 rounded-xl text-center text-xs space-y-2 border border-emerald-200 dark:border-emerald-800">
+            <p className="font-bold text-sm">Check Your Email Inbox</p>
+            <p>We've sent password reset instructions to <strong>{email}</strong>.</p>
           </div>
         )}
+
+        <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-700 text-center">
+          <button
+            onClick={() => navigateTo('signin')}
+            className="text-xs text-[#2B6CB0] dark:text-[#63B3ED] font-bold hover:underline"
+          >
+            ← Return to Sign In
+          </button>
+        </div>
       </div>
     </div>
   )

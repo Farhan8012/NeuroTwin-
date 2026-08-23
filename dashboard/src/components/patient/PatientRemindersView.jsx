@@ -1,52 +1,43 @@
 import React from 'react'
-import { useAppState } from '../../context/AppStateContext'
+import { Card } from '../common/UIPrimitives'
 
 export function PatientRemindersView() {
-  const { medicines, isLoadingMedicines, showToast } = useAppState()
+  const reminders = [
+    { time: '08:00 AM', text: 'Take Morning Medication & Eat Breakfast', done: true, icon: '💊' },
+    { time: '10:30 AM', text: 'Garden Walk & Listen to Lake Tahoe Memory Story', done: true, icon: '🌳' },
+    { time: '02:00 PM', text: 'Listen to Chopin Classical Piano Favorites', done: false, icon: '🎹' },
+    { time: '05:30 PM', text: 'Evening Video Call with Daughter Sarah', done: false, icon: '📞' },
+  ]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span className="material-symbols-outlined" style={{ color: 'var(--nt-primary)' }}>medication</span>
-        <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--nt-on-surface)' }}>Medications & Reminders</h2>
+    <div className="space-y-6 max-w-4xl mx-auto patient-mode-root">
+      <div>
+        <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100">Today's Reminders</h2>
+        <p className="text-base text-slate-600 dark:text-slate-300 mt-1">Easy checklist for your day</p>
       </div>
 
-      {isLoadingMedicines ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[1,2,3].map(i => <div key={i} className="nt-skeleton" style={{ height: 80, borderRadius: 'var(--r-lg)' }} />)}
-        </div>
-      ) : medicines.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {medicines.map((m, i) => (
-            <div key={m.id || i} className="nt-card" style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-              padding: 'var(--sp-md)', cursor: 'pointer',
-            }} onClick={() => showToast(`Marked "${m.name}" as taken`, 'success')}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span className="material-symbols-outlined" style={{ color: 'var(--nt-primary)', fontSize: 24 }}>medication</span>
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--nt-on-surface)' }}>{m.name}</div>
-                  <div style={{ fontSize: 13, color: 'var(--nt-on-surface-variant)' }}>{m.dosage} — {m.schedule_time}</div>
-                  {m.instructions && <div style={{ fontSize: 12, color: 'var(--nt-secondary)', marginTop: 2 }}>{m.instructions}</div>}
-                </div>
-              </div>
-              <div style={{
-                width: 28, height: 28, borderRadius: 'var(--r-md)',
-                border: '2px solid var(--nt-primary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--nt-primary)' }}>check</span>
+      <div className="space-y-4">
+        {reminders.map((r, idx) => (
+          <Card
+            key={idx}
+            className={`p-6 border-3 flex items-center justify-between ${
+              r.done
+                ? 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 opacity-70'
+                : 'bg-white dark:bg-slate-800 border-[#2B6CB0]'
+            }`}
+          >
+            <div className="flex items-center gap-5">
+              <span className="text-4xl">{r.icon}</span>
+              <div>
+                <span className="text-sm font-bold uppercase tracking-wider text-[#2B6CB0] dark:text-[#63B3ED]">{r.time}</span>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{r.text}</h3>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="nt-empty">
-          <span className="material-symbols-outlined nt-empty-icon">medication</span>
-          <h4 className="nt-empty-title">No medications scheduled</h4>
-          <p className="nt-empty-desc">Your caregiver will add your medications and schedule here.</p>
-        </div>
-      )}
+
+            <input type="checkbox" checked={r.done} readOnly className="w-8 h-8 rounded-lg text-[#2B6CB0]" />
+          </Card>
+        ))}
+      </div>
     </div>
   )
 }
