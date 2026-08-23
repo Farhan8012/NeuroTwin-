@@ -37,7 +37,10 @@ data class VoiceResponse(
  */
 object RetrofitClient {
 
-    const val DEFAULT_BASE_URL = "http://10.0.2.2:8000/"
+    const val EMULATOR_BASE_URL = "http://10.0.2.2:8000/"
+    const val DEVICE_BASE_URL = "http://127.0.0.1:8000/"
+    val DEFAULT_BASE_URL get() = defaultBaseUrl()
+
     private const val PREFS = "neurotwin_settings"
     private const val KEY_BASE_URL = "base_url"
     private const val KEY_API_KEY = "api_key"
@@ -49,11 +52,30 @@ object RetrofitClient {
 
     @Volatile private var cachedApi: NeuroTwinApi? = null
 
+    private fun isEmulator(): Boolean {
+        return (android.os.Build.FINGERPRINT.startsWith("generic")
+                || android.os.Build.FINGERPRINT.startsWith("unknown")
+                || android.os.Build.MODEL.contains("google_sdk")
+                || android.os.Build.MODEL.contains("Emulator")
+                || android.os.Build.MODEL.contains("Android SDK built for x86")
+                || android.os.Build.MANUFACTURER.contains("Genymotion")
+                || (android.os.Build.BRAND.startsWith("generic") && android.os.Build.DEVICE.startsWith("generic"))
+                || "google_sdk" == android.os.Build.PRODUCT)
+    }
+
+    fun defaultBaseUrl(): String = if (isEmulator()) EMULATOR_BASE_URL else DEVICE_BASE_URL
+
     /** Resolve stored configuration once per process; call from Application. */
     fun init(context: Context) {
         appContext = context.applicationContext
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        baseUrl = prefs.getString(KEY_BASE_URL, DEFAULT_BASE_URL)
+        val defaultUrl = defaultBaseUrl()
+        var savedUrl = prefs.getString(KEY_BASE_URL, null)
+        if (savedUrl == null || (!isEmulator() && savedUrl.contains("10.0.2.2"))) {
+            savedUrl = defaultUrl
+            prefs.edit().putString(KEY_BASE_URL, savedUrl).apply()
+        }
+        baseUrl = savedUrl
         apiKey = prefs.getString(KEY_API_KEY, null)
     }
 

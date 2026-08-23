@@ -1,3 +1,4 @@
+import platform
 from fastapi import APIRouter
 from datetime import datetime, timezone
 import psutil
@@ -11,46 +12,55 @@ router = APIRouter(prefix="/health", tags=["Health & Telemetry"])
 
 def _qdrant_status() -> str:
     if getattr(qdrant_service, "is_connected", False):
-        return "connected"
+        return "connected (Qdrant Cloud)" if settings.QDRANT_URL else "connected (local)"
     try:
         if hasattr(qdrant_service, "client") and qdrant_service.client:
-            return "connected"
+            return "connected (Qdrant Cloud)" if settings.QDRANT_URL else "connected (local)"
         return "disconnected"
     except Exception:
         return "disconnected"
 
 
-async def _ollama_status() -> str:
+async def _llm_status() -> str:
+    if settings.LLM_PROVIDER == "groq" and settings.GROQ_API_KEY:
+        return "active (Groq Cloud llama-3.3-70b)"
     try:
         async with httpx.AsyncClient(timeout=0.5) as client:
             resp = await client.get(f"{settings.OLLAMA_BASE_URL}/api/tags")
-            return "active" if resp.status_code == 200 else "unreachable"
+            return "active (Ollama local)" if resp.status_code == 200 else "unreachable"
     except Exception:
         return "unreachable"
+
+
+def _stt_status() -> str:
+    if settings.STT_PROVIDER == "groq" and settings.GROQ_API_KEY:
+        return "ready (Groq Cloud Whisper-large-v3)"
+    return "ready (Whisper local)"
 
 
 @router.get("")
 async def get_health():
     vm = psutil.virtual_memory()
-    qdrant_ok = _qdrant_status() == "connected"
-    ollama_ok = await _ollama_status()
+    qdrant_status_str = _qdrant_status()
+    qdrant_ok = "connected" in qdrant_status_str
+    llm_ok = await _llm_status()
     stats = qdrant_service.collection_stats() if qdrant_ok else {}
 
     return {
         "status": "online",
-        "service": "NeuroTwin FastAPI Engine",
+        "service": "NeuroTwin Cloud Engine",
         "version": settings.VERSION,
         "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "components": {
             "fastapi": "healthy",
-            "qdrant_vector_db": _qdrant_status(),
-            "ollama_llm": ollama_ok,
-            "whisper_stt": "ready",
+            "qdrant_vector_db": qdrant_status_str,
+            "llm_engine": llm_ok,
+            "stt_engine": _stt_status(),
             "tts_piper": "ready",
             "face_recognition": "ready",
         },
         "system_metrics": {
-            "host": "Apple M4 MacBook Air",
+            "host": f"NeuroTwin Cloud Host ({platform.system()} {platform.machine()})",
             "cpu_percent": psutil.cpu_percent(interval=0.3),
             "memory_percent": vm.percent,
             "memory_used_gb": round(vm.used / (1024 ** 3), 2),
