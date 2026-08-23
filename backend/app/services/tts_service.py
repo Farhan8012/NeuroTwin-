@@ -11,6 +11,24 @@ logger = logging.getLogger("neurotwin.tts")
 _voice = None
 
 
+def _get_voice():
+    global _voice
+    if _voice is None:
+        try:
+            from piper.voice import PiperVoice
+            if settings.PIPER_MODEL_PATH.exists() and settings.PIPER_CONFIG_PATH.exists():
+                _voice = PiperVoice.load(
+                    str(settings.PIPER_MODEL_PATH),
+                    config_path=str(settings.PIPER_CONFIG_PATH)
+                )
+                logger.info("Piper TTS voice loaded: %s", settings.PIPER_MODEL_PATH.name)
+            else:
+                logger.warning("Piper model files missing at %s", settings.PIPER_MODEL_PATH)
+        except Exception as e:
+            logger.warning("Failed to load Piper TTS voice: %s", e)
+    return _voice
+
+
 def synthesize(text: str) -> Optional[str]:
     """Synthesize text to a WAV file under static/audio. Returns the URL path or None."""
     if not settings.PIPER_MODEL_PATH.exists() or not settings.PIPER_CONFIG_PATH.exists():
