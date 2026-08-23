@@ -1,36 +1,45 @@
-# NeuroTwin — AI Memory Companion & Healthcare Platform
+# NeuroTwin Web Dashboard
 
-NeuroTwin is a production-grade AI memory companion built for Alzheimer's and dementia patients and caregivers. It helps patients recall important life memories while providing caregivers with a platform to organize, manage, and retrieve those memories using AI.
+A modern, accessible desktop Caregiver Portal and Patient Memory Companion built with **React 18**, **Three.js**, **Vite**, and **Tailwind CSS**.
 
-## Features
+---
 
-- **Caregiver Clinical Dashboard**: Overview of patient status, AI memory synthesis, cognitive vitality trends, system event logs, and medication reminders.
-- **Patient Digital Companion**: High-accessibility UI with extra-large touch targets, personalized morning companion greetings, interactive mood check-ins, featured memory albums, and 1-tap SOS emergency calling.
-- **Layered Architecture**: Next.js App Router, TypeScript, PostgreSQL, Prisma ORM, Supabase Authentication & Storage, Zod validation, and React Query data fetching.
-- **AI Vector Integration**: Qdrant vector memory indexing, Groq Llama 3 synthesis, and Whisper speech-to-text transcription.
+## 🌟 Key Features
 
-## Getting Started
+- **Caregiver Operations Dashboard**: Live cognitive recall index, real-time telemetry from Qdrant Cloud and FastAPI backend, and patient vitality status.
+- **Memories Library**: Visual memory anchor library categorized by life events, stories, songs, and favorite places.
+- **Family & Caregiver Contacts**: Photo and contact manager with automatic InsightFace 512-d vector indexing in Qdrant Cloud.
+- **Medication Scheduling**: Timed medication reminders with write-through synchronization to Supabase Cloud Postgres.
+- **Interactive Three.js Neural Monitor**: Real-time 3D particle and neural visualization of memory query activity.
+- **Seamless Backend Proxy**: Built-in Vite proxy forwarding `/api` and `/static` requests to FastAPI on port `8000`.
 
-### Local Development
+---
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+## 🚀 Getting Started
 
-2. Start the development server:
-   ```bash
-   npm run dev
-   ```
+### 1. Install Dependencies
+```bash
+npm install
+```
 
-3. Build for production:
-   ```bash
-   npm run build
-   ```
+### 2. Run Development Server
+```bash
+npm run dev
+```
+Open **[http://localhost:5173/](http://localhost:5173/)** in your browser.
 
-## Tech Stack
+### 3. Build for Production
+```bash
+npm run build
+```
+The production bundle is generated in `dist/` and automatically served by FastAPI under `http://localhost:8000/dashboard/`.
 
-- **Frontend**: React 18, Vite, Tailwind CSS
-- **Backend Architecture**: Next.js App Router, TypeScript, REST API Route Handlers
-- **Database & ORM**: PostgreSQL, Prisma ORM, Supabase Auth & Storage
-- **AI & Vector Engine**: Qdrant Vector DB, Groq Llama 3, Whisper AI
+---
+
+## 🛠️ Architecture & Tech Stack
+
+- **Framework**: React 18, Vite 5
+- **3D & Motion**: Three.js, `@react-three/fiber`, `@react-three/drei`, GSAP, Framer Motion
+- **Styling**: Tailwind CSS + Custom Empathy Design Tokens
+- **Icons**: Material Symbols Outlined & Google Fonts Inter
+- **Backend Connection**: FastAPI REST API (`http://localhost:8000/api/v1`)

@@ -1,428 +1,208 @@
-# NeuroTwin — Usage Guide
+# NeuroTwin — Comprehensive Operations & Usage Manual
 
-Everything you need to set up, run, and use the NeuroTwin cognitive companion system.
-
----
-
-## Prerequisites
-
-| Component | Requirement |
-|-----------|-------------|
-| **OS** | macOS (Apple Silicon M4 recommended) or Linux |
-| **Python** | 3.12+ (via `uv` or system Python) |
-| **Qdrant** | Native binary included at `backend/qdrant/bin/qdrant` |
-| **Ollama** | Running locally with `qwen3:8b` model pulled |
-| **Node/HTTP server** | Python 3 built-in `http.server` works for the web dashboard |
+Everything you need to configure, run, test, and use the complete NeuroTwin system across Backend, Web Dashboard, and Android Mobile Client.
 
 ---
 
-## 1. First-Time Setup
+## 📋 System Overview & Components
 
-### Clone & enter the project
-```bash
-cd /path/to/Neuro_Twin
-```
+| Component | Technology | Default URL / Port | Role |
+| :--- | :--- | :--- | :--- |
+| **Backend Orchestrator** | FastAPI (Python 3.12) | `http://localhost:8000` | REST API, AI pipelines, Qdrant & Supabase sync |
+| **Interactive API Docs** | Swagger / OpenAPI | `http://localhost:8000/docs` | Live API testing & schema reference |
+| **Senior Web App** | HTML5 / Vanilla JS | `http://localhost:8000/app/` | Lightweight Senior & Caregiver browser UI |
+| **Modern Web Dashboard** | React 18 + Vite | `http://localhost:5173/` | Full desktop Caregiver & Patient management portal |
+| **Android Client** | Kotlin / Jetpack Compose | Physical Device (Wi-Fi) | Live CameraX Viewfinder, Voice Companion, SOS |
+| **Vector Database** | Qdrant Cloud | `https://*.qdrant.io` | 512-d ArcFace & 128-d object vector embeddings |
+| **Cloud Database** | Supabase Postgres | `https://*.supabase.co` | Structured records write-through mirror & storage |
+| **Reasoning LLM** | Groq Cloud API | `openai/gpt-oss-120b` | Empathetic reasoning & contextual conversation |
+| **Speech-to-Text** | Groq Whisper Cloud | `whisper-large-v3` | Fast, accurate voice query transcription |
+| **Text-to-Speech** | Piper Neural TTS | `en_US-lessac-medium` | Local real-time natural speech synthesis |
 
-### Python virtual environment
+---
+
+## 1. 🚀 First-Time Backend Setup
+
+### Prerequisites
+- macOS (Apple Silicon or Intel) or Linux
+- Python 3.12+ (managed via `uv` or system Python)
+
+### Step 1: Environment & Dependencies
 ```bash
 cd backend
+
+# Create virtual environment
 uv venv --python 3.12 .venv
-uv pip install --python .venv/bin/python -r requirements.txt
+source .venv/bin/activate
+
+# Install all dependencies
+pip install -r requirements.txt
 ```
 
-### Configuration
-```bash
-cp .env.example .env
-# Edit .env if you want to change defaults (optional for local dev)
-```
+### Step 2: Environment Configuration (`backend/.env`)
+Create or edit `backend/.env` with your API credentials:
 
-Key `.env` variables:
-```bash
-LLM_PROVIDER=ollama          # "ollama" (default) or "groq"
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=qwen3:8b
-QDRANT_HOST=localhost
-QDRANT_PORT=6333
+```ini
+# Primary LLM & STT Provider (Groq Cloud)
+LLM_PROVIDER=groq
+GROQ_API_KEY=gsk_your_groq_api_key_here
+STT_PROVIDER=groq
+
+# Qdrant Vector Database
+QDRANT_URL=https://your-cluster-id.qdrant.io
+QDRANT_API_KEY=your_qdrant_api_key_here
+QDRANT_COLLECTION_PEOPLE=people
+QDRANT_COLLECTION_OBJECTS=objects
 FACE_MATCH_THRESHOLD=0.50
-WHISPER_MODEL=base
-NEUROTWIN_API_KEY=            # Leave blank to disable auth in dev
+
+# Supabase Cloud Database (Write-Through Sync)
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_SERVICE_KEY=your_service_role_secret_key_here
+
+# Network & App Config
+DEVICE_LAN_IP=192.168.0.198
+API_V1_STR=/api/v1
 ```
 
-### Pull the Ollama model (if not already pulled)
+### Step 3: Launching the Backend Server
 ```bash
-ollama pull qwen3:8b
-```
-
-### Verify Ollama is running
-```bash
-curl http://localhost:11434/api/tags
-# Should show qwen3:8b in the models list
-```
-
-### Seed the database with sample data
-```bash
-cd backend
-.venv/bin/python seed.py
-```
-
-This populates:
-- 3 sample people (Sarah Varma, Dr. Thorne, Robert Lowe) with face vectors in Qdrant
-- 5 memory anchors (life events, songs, stories)
-- 4 medications (Donepezil, Memantine, Vitamin D3, Melatonin)
-- 3 emergency contacts
-
-Safe to run multiple times — skips existing data.
-
----
-
-## 2. Starting the System
-
-### Option A: One-Command Startup (Recommended)
-
-```bash
-# Start all 3 services with one command
-./start.sh
-
-# Other commands:
-./start.sh --status    # Check what's running
-./start.sh --stop      # Stop everything
-./start.sh --docker    # Use Docker Compose instead
-```
-
-This starts Qdrant, FastAPI, and the web dashboard automatically with health checks.
-
-### Option B: Docker Compose
-
-```bash
-docker compose up --build
-```
-
-This runs Qdrant + FastAPI in containers. Ollama runs on the host machine and is accessed via `host.docker.internal`. The web dashboard still needs to be served separately:
-
-```bash
-cd web && python3 -m http.server 5500
-```
-
-### Option C: Manual (3 terminals)
-
-**Terminal 1 — Qdrant:**
-```bash
-cd backend
-./qdrant/bin/qdrant --config-path qdrant/config.yaml
-```
-
-**Terminal 2 — FastAPI:**
-```bash
-cd backend
-.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-**Terminal 3 — Web Dashboard:**
-```bash
-cd web
-python3 -m http.server 5500
-```
-
-### Verify everything is running
-```bash
-# Check all services
-./start.sh --status
-
-# Backend health check
-curl http://localhost:8000/api/v1/health
-
-# Open web dashboard
-open http://localhost:5500
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ---
 
-## 3. Accessing the UI
+## 2. 🌐 Launching the Web Dashboard
 
-Open your browser and go to:
-
-| URL | What it is |
-|-----|-----------|
-| **http://localhost:5500** | Web dashboard (Patient + Caregiver modes) |
-| **http://localhost:8000/docs** | FastAPI Swagger API documentation |
-| **http://localhost:8000** | Backend root (health check) |
-
----
-
-## 4. Using the Web Dashboard
-
-### Patient Mode (default view)
-The large-type interface designed for elderly patients:
-
-1. **Recognition Card** — Shows the currently detected person with their relationship, name, and a warm summary of recent interactions.
-
-2. **🎙️ Tap to Ask a Question** — Big white button. Click it to send a voice query to the backend. The LLM generates a warm companion response, and a Piper TTS audio file is created. Click "Play Audio Answer" to hear it.
-
-3. **🎵 Play Sarah's Song** — Plays a comforting song through the earpiece.
-
-4. **📞 Call Daughter Sarah** — Initiates a phone call to the registered contact.
-
-5. **Memory Cards** — Reassuring stories and memories about the recognized person.
-
-### Caregiver Mode
-Click **⚙️ Caregiver Mode** in the top-right to switch. This reveals 5 tabs:
-
-#### 👥 People Tab
-- View all registered people with their ID, name, relationship, birthday, vector status, and key memory.
-- **+ Add New Person** — Opens a modal to register a new person:
-  - Fill in name, relationship, birthday, initial memory
-  - Upload a reference photo ( InsightFace extracts a 512-d face vector and indexes it into Qdrant)
-  - Click "Save & Index Face Vector"
-- **Delete** — Removes the person profile AND their face vectors from Qdrant (right to be forgotten).
-
-#### 🧠 Memories Tab
-- View all memory anchors (life events, anecdotes, songs, places, hobbies).
-- **+ Add Memory** — Opens a modal:
-  - Title, description, category (story/life_event/song/place/hobby/anecdote)
-  - Optional person binding
-- **Delete** — Removes the memory from persistent storage.
-
-#### 💊 Medicines Tab
-- View the medication schedule (pre-seeded with Donepezil and Memantine).
-- **+ Add Medicine** — Opens a modal:
-  - Medicine name, dosage, schedule time, instructions
-- **Delete** — Removes the medication.
-
-#### 🚨 Emergency Tab
-- View emergency contacts (pre-seeded with Sarah Varma and Dr. Thorne).
-- **+ Add Contact** — Opens a modal:
-  - Name, relationship, phone number, is-primary toggle
-- **Delete** — Removes the contact.
-
-#### 📊 Telemetry Tab
-- Live system metrics from the M4 backend:
-  - FastAPI status, Qdrant connection, Ollama LLM, Whisper STT, Piper TTS
-  - CPU usage, memory usage
-  - Indexed people count, indexed objects count
-- **Patient Voice Query Log** — Running history of all voice queries and responses.
-- **↻ Refresh** — Re-fetches telemetry data.
-
----
-
-## 5. Using the API Directly
-
-All endpoints are under `http://localhost:8000/api/v1`.
-
-### Patient-Facing (no auth needed)
-
+### Caregiver & Patient React Portal (Vite)
 ```bash
-# Health check
-curl http://localhost:8000/api/v1/health
+cd dashboard
+npm install
+npm run dev
+```
+Open **[http://localhost:5173/](http://localhost:5173/)** in your browser.
 
-# Upload a camera frame for face recognition
-curl -X POST http://localhost:8000/api/v1/frame \
-  -F "file=@photo_of_person.jpg"
+- **Desktop Sidebar**: Switch between Caregiver Dashboard, Memories Library, Registered Family & Contacts, Timeline, and Patient Companion.
+- **Real-Time Recall Index**: Displays live vector indexing status from Qdrant Cloud.
+- **Medication & Memory Manager**: Add or edit prescriptions and cherished life events with automated Supabase sync.
 
-# Send a text voice query
-curl -X POST http://localhost:8000/api/v1/voice-query \
+---
+
+## 3. 📱 Android Mobile Client Setup & Usage
+
+### Step 1: Building the APK
+```bash
+cd mobile
+./gradlew assembleDebug
+```
+The compiled APK is placed at `mobile/app/build/outputs/apk/debug/app-debug.apk` and copied to `backend/static/app-debug.apk`.
+
+### Step 2: Wireless ADB Deployment (No Cables Needed)
+1. On your phone, connect to the same Wi-Fi network as your computer.
+2. Go to **Settings → Developer Options → Wireless Debugging** and turn it **ON**.
+3. Pair or connect using the port shown on your device:
+```bash
+adb connect 192.168.0.178:XXXXX
+adb install -r mobile/app/build/outputs/apk/debug/app-debug.apk
+adb shell pm grant com.neurotwin.app android.permission.CAMERA
+adb shell pm grant com.neurotwin.app android.permission.RECORD_AUDIO
+adb shell monkey -p com.neurotwin.app -c android.intent.category.LAUNCHER 1
+```
+
+### Step 3: Using the Mobile App
+- **Live AI Camera Viewfinder**: Tap the expand arrow on the **AI Camera Vision** card to view the live preview. The app streams frames to `POST /api/v1/frame` and shows real-time face and object recognition badges.
+- **Hold to Talk**: Press and hold the blue microphone button at the bottom, speak naturally (e.g. *"Who is standing in front of me?"* or *"Remember that my keys are on the kitchen table"*), then release to receive an immediate spoken voice response.
+- **Quick Question Chips**: Tap *"Who is here?"*, *"Where are my glasses?"*, or *"What medicines today?"* for 1-tap instant answers.
+- **Emergency SOS**: Tap the red **CALL SOS** button to dial the primary emergency contact directly.
+
+---
+
+## 4. 🧠 Conversational Memory Saving & Recall
+
+NeuroTwin features automatic memory ingestion directly backed by **Supabase Cloud Postgres**:
+
+### Storing a New Memory / Location
+Speak or type queries containing remember intent:
+- *"Remember that my blue glasses are on the bedside nightstand"*
+- *"Please remember that my grandson Leo loves strawberry gelato"*
+- *"Don't forget that Dr. Patel's checkup is on Thursday at 2 PM"*
+
+**What happens:**
+1. The AI extracts structured fields (`title`, `description`, `category`, `person_binding`).
+2. Persists the record into local storage and synchronizes immediately to the Supabase `memories` table.
+3. Speaks a warm confirmation: *"I've safely remembered that for you! Your blue glasses are on the bedside nightstand."*
+
+### Recalling Information
+Ask naturally at any later time:
+- *"Where are my blue glasses?"* → *"Your blue glasses are right on the bedside nightstand."*
+- *"What treat does Leo like?"* → *"Your grandson Leo loves strawberry gelato."*
+
+---
+
+## 5. 🔌 Supabase MCP Server Integration
+
+To manage and inspect your Supabase database directly within Antigravity or AI agents, the Supabase MCP Server is configured in `~/.gemini/antigravity/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "supabase": {
+      "serverUrl": "https://mcp.supabase.com/mcp?project_ref=jhsgxhotzowzjjoridzy&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"
+    }
+  }
+}
+```
+
+### Installed Agent Skills (`.agents/skills/`)
+- `supabase`: Full Supabase product suite commands and schema management.
+- `supabase-postgres-best-practices`: Performance, RLS security, and index optimization guides.
+
+---
+
+## 6. 🧪 REST API Reference & Testing
+
+### Test Voice Query
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/voice-query \
   -H "Content-Type: application/json" \
-  -d '{"patient_query": "Who is she?"}'
-
-# Send an audio file for STT → LLM → TTS
-curl -X POST http://localhost:8000/api/v1/voice-query/audio \
-  -F "audio=@recording.wav"
+  -d '{"patient_query": "What medicines do I take today?"}'
 ```
 
-### Caregiver CRUD (auth required if `NEUROTWIN_API_KEY` is set)
-
+### Test Camera Frame Stream
 ```bash
-# If auth is enabled, add this header to all caregiver requests:
-# -H "X-API-Key: your-secret-key"
+curl -X POST http://127.0.0.1:8000/api/v1/frame \
+  -F "file=@backend/static/photos/d29b2602_rob1.jpg"
+```
 
-# List all people
-curl http://localhost:8000/api/v1/people
-
-# Register a person with photo (indexes face vector)
-curl -X POST http://localhost:8000/api/v1/people/with-photo \
-  -F "name=Sarah Varma" \
-  -F "relationship=Daughter" \
-  -F "birthday=1992-04-14" \
-  -F "memory=Brought blueberry muffins yesterday" \
-  -F "photos=@sarah_reference.jpg"
-
-# List memories
-curl http://localhost:8000/api/v1/memories
-
-# Create a memory
-curl -X POST http://localhost:8000/api/v1/memories \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Graduated law school", "description": "In 2016", "category": "life_event"}'
-
-# List medicines
-curl http://localhost:8000/api/v1/medicines
-
-# List emergency contacts
-curl http://localhost:8000/api/v1/emergency-contacts
-
-# List tracked objects
-curl http://localhost:8000/api/v1/objects
-
-# Get last-seen location for an object
-curl http://localhost:8000/api/v1/objects/reading_glasses/location
-
-# Delete any resource (people, memories, medicines, contacts)
-curl -X DELETE http://localhost:8000/api/v1/people/p_001
-curl -X DELETE http://localhost:8000/api/v1/memories/mem_01
-curl -X DELETE http://localhost:8000/api/v1/medicines/med_01
-curl -X DELETE http://localhost:8000/api/v1/emergency-contacts/em_01
+### Test System Health & Telemetry
+```bash
+curl http://127.0.0.1:8000/api/v1/health
 ```
 
 ---
 
-## 6. Enabling API Authentication
+## 7. 🛠️ Troubleshooting & FAQs
 
-For production or network-accessible deployments:
+### Q: Why is the app showing "Can't reach backend"?
+1. Verify both the Mac/PC and phone are on the same Wi-Fi network.
+2. Confirm the Mac's LAN IP in `RetrofitClient.kt` matches your current IP (e.g. `http://192.168.0.198:8000/`).
+3. Ensure FastAPI is running on host `0.0.0.0` (not just `127.0.0.1`).
 
+### Q: How do I reset all test/filler data?
+Run the reset script in `backend/`:
 ```bash
-# Set the API key
-export NEUROTWIN_API_KEY=my-super-secret-key
-
-# Or add to .env
-echo "NEUROTWIN_API_KEY=my-super-secret-key" >> backend/.env
-
-# Restart the backend
 cd backend
-.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-Now caregiver endpoints require the header:
-```bash
-curl -H "X-API-Key: my-super-secret-key" http://localhost:8000/api/v1/people
-```
-
-Patient-facing endpoints (`/health`, `/frame`, `/voice-query`) remain open.
-
----
-
-## 7. Android Mobile Client
-
-The mobile app is in `mobile/` and requires Android Studio.
-
-### Build & Run
-1. Open `mobile/` in Android Studio
-2. Sync Gradle
-3. Run on emulator or physical device
-4. The app connects to `http://10.0.2.2:8000/` (emulator) — change `BASE_URL` in `NeuroTwinApiService.kt` for physical device on LAN
-
-### What the mobile client does
-- **CameraX** captures frames continuously
-- **ML Kit** filters frames with faces locally (no upload if no face)
-- Gated frames are uploaded to `POST /frame` for InsightFace embedding + Qdrant match
-- Matched person context is displayed on the senior-friendly UI
-- Voice queries are sent as JSON to `POST /voice-query`
-- Audio recordings can be sent to `POST /voice-query/audio` for server-side STT
-
----
-
-## 8. Directory Structure
-
-```
-Neuro_Twin/
-├── start.sh                  # One-command startup script
-├── docker-compose.yml        # Docker Compose (Qdrant + FastAPI)
-├── USAGE.md                  # This file
-├── backend/
-│   ├── Dockerfile            # Backend container build
-│   ├── seed.py               # Database seed script
-│   ├── app/
-│   │   ├── main.py              # FastAPI app + middleware
-│   │   ├── config.py            # Environment settings
-│   │   ├── schemas.py           # Pydantic models
-│   │   ├── auth.py              # API key authentication
-│   │   ├── services/
-│   │   │   ├── qdrant_service.py    # Vector DB (people + objects)
-│   │   │   ├── face_service.py      # InsightFace 512-d embeddings
-│   │   │   ├── stt_service.py       # Whisper speech-to-text
-│   │   │   ├── llm_service.py       # Ollama/Groq LLM reasoning
-│   │   │   ├── tts_service.py       # Piper text-to-speech
-│   │   │   ├── people_store.py      # Person profile registry
-│   │   │   ├── context_cache.py     # Visual context TTL cache
-│   │   │   └── json_store.py        # Generic JSON CRUD store
-│   │   └── routers/
-│   │       ├── health.py         # System telemetry
-│   │       ├── frame.py          # Camera frame → face match
-│   │       ├── voice.py          # Voice query → LLM → TTS
-│   │       ├── people.py         # People CRUD + photo indexing
-│   │       ├── memories.py       # Memory anchors CRUD
-│   │       ├── medicines.py      # Medications CRUD
-│   │       ├── emergency.py      # Emergency contacts CRUD
-│   │       └── objects.py        # Object tracking queries
-│   ├── qdrant/                   # Native Qdrant binary + config
-│   ├── models/                   # AI model weights (~800MB total)
-│   ├── data/                     # JSON persistent storage
-│   ├── static/audio/             # Generated TTS WAV files
-│   ├── static/photos/            # Uploaded reference photos
-│   ├── .env                      # Configuration
-│   └── requirements.txt
-├── web/
-│   ├── index.html                # Single-page app
-│   ├── app.js                    # Frontend controller
-│   └── styles.css                # Dark theme design system
-├── mobile/                       # Android Kotlin + Compose app
-│   └── app/src/main/java/com/neurotwin/app/
-│       ├── MainActivity.kt       # Senior patient UI
-│       ├── network/              # Retrofit API client
-│       ├── ml/                   # ML Kit face detection
-│       └── service/              # Camera foreground service
-└── NeuroTwin/                    # Obsidian vault (project docs)
-```
-
----
-
-## 9. Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| `Qdrant DB connection failed` | Start Qdrant: `./qdrant/bin/qdrant --config-path qdrant/config.yaml` |
-| `Ollama local LLM unavailable` | Start Ollama: `ollama serve` then `ollama pull qwen3:8b` |
-| `Whisper model not found` | First run auto-downloads to `backend/models/whisper/` (~145MB) |
-| `InsightFace model not found` | First run auto-downloads to `backend/models/insightface/` (~570MB) |
-| `Piper model not found` | Already bundled at `backend/models/piper/en_US-lessac-medium.onnx` |
-| Web dashboard shows "Backend offline" | Make sure FastAPI is running on port 8000 |
-| `401 Invalid or missing X-API-Key` | Set `NEUROTWIN_API_KEY` env var or remove it from `.env` to disable auth |
-| Mobile app can't connect | Check `BASE_URL` in `NeuroTwinApiService.kt` — use `10.0.2.2` for emulator, LAN IP for physical device |
-| Port 8000 already in use | `kill -9 $(lsof -ti :8000)` then restart |
-
----
-
-## 10. Architecture at a Glance
-
-```
-┌─────────────────────────────────────────────────────┐
-│                   Android Phone                      │
-│  CameraX → ML Kit Filter → Upload gated frames      │
-│  Microphone → Record → Upload audio                  │
-│  Display: Recognition card + Voice response          │
-└──────────┬──────────────────────────┬───────────────┘
-           │ POST /frame              │ POST /voice-query
-           ▼                          ▼
-┌─────────────────────────────────────────────────────┐
-│              FastAPI Backend (M4 MacBook)            │
-│                                                      │
-│  /frame → InsightFace → 512-d embedding              │
-│         → Qdrant cosine search → person context      │
-│         → Cache visual context (TTL 120s)            │
-│                                                      │
-│  /voice-query → LLM (Ollama qwen3:8b)               │
-│               → Piper TTS → WAV audio                │
-│               → Return transcript + response + audio  │
-│                                                      │
-│  /people CRUD → people_store.py (JSON)               │
-│              → Qdrant people collection               │
-│                                                      │
-│  /memories, /medicines, /emergency-contacts          │
-│              → json_store.py (persistent JSON)        │
-└─────────────────────────────────────────────────────┘
-           │                          │
-           ▼                          ▼
-┌──────────────────┐    ┌──────────────────────┐
-│   Qdrant :6333   │    │   Ollama :11434       │
-│  people (512-d)  │    │   qwen3:8b (8.2B)    │
-│  objects (128-d) │    │   ~11s response       │
-└──────────────────┘    └──────────────────────┘
+.venv/bin/python -c "
+from app.services import supabase_sync, json_store, people_store
+import httpx
+headers = supabase_sync._headers()
+base = supabase_sync._base()
+with httpx.Client(timeout=10.0) as client:
+    for tbl in ['memories', 'medicines', 'emergency_contacts', 'people', 'ble_beacons', 'ble_rssi_log']:
+        client.delete(f'{base}/{tbl}', params={'id': 'neq.dummy_nonexistent_id'}, headers=headers)
+json_store.JSONStore('memories.json').write_all([])
+json_store.JSONStore('medicines.json').write_all([])
+json_store.JSONStore('emergency_contacts.json').write_all([])
+people_store.write_all([])
+print('All databases reset to 0 rows!')
+"
 ```
