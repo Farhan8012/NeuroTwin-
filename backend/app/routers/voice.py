@@ -43,12 +43,10 @@ async def process_voice_query(request: VoiceQueryRequest):
     """Process a voice query sent as JSON: { patient_query, visual_context? }"""
     start_time = time.time()
 
-    # Merge explicit visual_context with the TTL-cached context from the last frame
+    # Merge explicit visual_context with the TTL-cached context from the live camera stream
     ctx = request.visual_context
     if not ctx:
-        cached = context_cache.get_visual_context()
-        if cached.get("person"):
-            ctx = cached["person"]
+        ctx = context_cache.get_visual_context()
 
     response_text = llm_service.generate_companion_response(
         patient_query=request.patient_query,
@@ -87,6 +85,8 @@ async def process_voice_audio(
             ctx = _json.loads(visual_context)
         except Exception:
             pass
+    if not ctx:
+        ctx = context_cache.get_visual_context()
 
     response_text = llm_service.generate_companion_response(
         patient_query=patient_query,

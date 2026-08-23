@@ -125,15 +125,34 @@ Return ONLY a valid JSON object (no markdown, no other text) with these keys:
         return new_memory
 
     def _build_context_summary(self, visual_context: Optional[Dict[str, Any]] = None) -> str:
-        """Assemble real patient context from database (Supabase backed) and active camera feed."""
+        """Assemble real patient context from database (Supabase backed) and active live camera stream."""
         # 1. Real Visual Context (Camera Feed)
-        if visual_context and (visual_context.get("name") or visual_context.get("person_id")):
-            name = visual_context.get("name", "Unknown")
-            rel = visual_context.get("relationship", "Friend")
-            mems = visual_context.get("memories", [])
-            visual_str = f"Recognized person in view: {name} ({rel}). Notes: {', '.join(mems) if mems else 'None'}"
+        visual_parts = []
+        if visual_context:
+            person_info = visual_context.get("person") if isinstance(visual_context.get("person"), dict) else (
+                visual_context if (visual_context.get("name") or visual_context.get("person_id")) else None
+            )
+
+            if person_info and person_info.get("name"):
+                name = person_info.get("name", "Unknown")
+                rel = person_info.get("relationship", "Friend")
+                mems = person_info.get("memories", [])
+                visual_parts.append(f"Person in front of camera: {name} ({rel}). Notes: {', '.join(mems) if mems else 'None'}")
+            elif visual_context.get("face_detected"):
+                visual_parts.append("Human face visible in camera feed (unrecognized visitor).")
+
+            objects = visual_context.get("objects", [])
+            if objects:
+                obj_labels = [f"{o.get('label', o.get('class', 'item'))} ({int(o.get('confidence', 1.0) * 100)}% match)" for o in objects]
+                visual_parts.append(f"Objects detected in camera view: {', '.join(obj_labels)}")
+
+            if visual_context.get("camera_active") or visual_parts:
+                visual_parts.append("Camera Status: Live & Connected.")
+
+        if not visual_parts:
+            visual_str = "Camera is active. No person or objects currently detected in front of the lens."
         else:
-            visual_str = "No person currently recognized in camera view."
+            visual_str = "\n".join(f"- {p}" for p in visual_parts)
 
         # 2. Real Registered Family & Caregivers
         try:

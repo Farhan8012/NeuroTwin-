@@ -28,11 +28,7 @@ async def process_incoming_frame(
     # 1. Process frame via InsightFace & Qdrant vector search
     matched, score, person_payload = face_service.process_frame(image_bytes)
 
-    # 2. Cache the visual context for the next voice query (TTL-based)
-    if matched and person_payload:
-        context_cache.store_visual_context(person=person_payload, objects=[])
-
-    # 3. Object detection via YOLOv8-nano
+    # 2. Object detection via YOLOv8-nano
     detections = object_detection_service.detect(image_bytes)
     detected_objects = []
     for det in detections:
@@ -49,6 +45,14 @@ async def process_incoming_frame(
             },
         )
         detected_objects.append({"class": det["object_class"], "label": det["label"], "confidence": det["confidence"]})
+
+    # 3. Cache the complete visual context for the talking model
+    context_cache.store_visual_context(
+        person=person_payload if matched else None,
+        objects=detected_objects,
+        face_detected=bool(score > 0.3),
+        confidence=score
+    )
 
     processing_ms = round((time.time() - start_time) * 1000, 2)
 
