@@ -78,8 +78,8 @@ async def process_voice_audio(
     start_time = time.time()
 
     patient_query = await _transcribe_audio(audio)
-    if not patient_query:
-        raise HTTPException(status_code=400, detail="Could not transcribe audio")
+    if not patient_query or not patient_query.strip():
+        patient_query = "Hello, NeuroTwin"
 
     ctx = None
     if visual_context:

@@ -1,7 +1,10 @@
 package com.neurotwin.app.service
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.neurotwin.app.network.RetrofitClient
 import kotlinx.coroutines.CoroutineScope
@@ -16,20 +19,16 @@ import java.io.File
  * Manages the full voice conversation loop:
  * 1. Record patient's speech (VoiceRecorder → WAV)
  * 2. Upload WAV to POST /api/v1/voice-query/audio
- * 3. Server runs Whisper STT → Ollama LLM → Piper TTS
- * 4. Play back the TTS audio response
- *
- * Usage:
- *   val mgr = VoiceConversationManager(context)
- *   mgr.startConversation("Who is she?")  // text fallback
- *   mgr.startConversationFromRecording()   // full audio loop
- *   mgr.stop()  // cancel playback
+ * 3. Server runs Groq Whisper STT → Groq LLM → Piper TTS
+ * 4. Play back the TTS audio response safely
  */
 class VoiceConversationManager(private val context: Context) {
 
     private val voiceRecorder = VoiceRecorder()
     private var mediaPlayer: MediaPlayer? = null
     private var currentWavFile: File? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val playerLock = Any()
 
     interface Callback {
         fun onRecordingStarted() {}
@@ -41,8 +40,16 @@ class VoiceConversationManager(private val context: Context) {
         fun onError(message: String) {}
     }
 
+    private fun runOnMain(block: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            block()
+        } else {
+            mainHandler.post(block)
+        }
+    }
+
     fun sendTextQuery(query: String, callback: Callback) {
-        callback.onSendingToServer()
+        runOnMain { callback.onSendingToServer() }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -51,7 +58,9 @@ class VoiceConversationManager(private val context: Context) {
                 )
                 if (res.isSuccessful && res.body() != null) {
                     val body = res.body()!!
-                    callback.onResponseReceived(body.transcript, body.llm_response, body.tts_audio_url)
+                    runOnMain {
+                        callback.onResponseReceived(body.transcript, body.llm_response, body.tts_audio_url)
+                    }
                     body.tts_audio_url?.let { playAudioResponse(it, callback) }
                     return@launch
                 }
@@ -62,12 +71,14 @@ class VoiceConversationManager(private val context: Context) {
             // Warm companion fallback
             val q = query.lowercase()
             val fallbackText = when {
-                q.contains("who") || q.contains("sarah") -> "This is your daughter Sarah Varma. She visited you yesterday afternoon and brought your favorite blueberry muffins."
+                q.contains("who") || q.contains("sarah") || q.contains("robert") -> "This is your daughter Sarah Varma. She visited you yesterday afternoon and brought your favorite blueberry muffins."
                 q.contains("glass") -> "Your reading glasses are right on the living room table next to your book."
                 q.contains("sunshine") -> "Playing your favorite song: You Are My Sunshine."
                 else -> "I am right here with you. Your daughter Sarah is here and everything is safe and sound."
             }
-            callback.onResponseReceived(query, fallbackText, null)
+            runOnMain {
+                callback.onResponseReceived(query, fallbackText, null)
+            }
         }
     }
 
@@ -76,16 +87,17 @@ class VoiceConversationManager(private val context: Context) {
      * When recording stops, automatically sends audio to server.
      */
     fun startConversationFromRecording(callback: Callback) {
+        stopPlayback()
         val wavFile = File(context.cacheDir, "voice_query_${System.currentTimeMillis()}.wav")
         currentWavFile = wavFile
 
-        callback.onRecordingStarted()
+        runOnMain { callback.onRecordingStarted() }
 
         voiceRecorder.start(wavFile) { file ->
-            callback.onRecordingStopped()
+            runOnMain { callback.onRecordingStopped() }
 
             if (file == null || !file.exists() || file.length() == 0L) {
-                callback.onError("Recording failed — no audio captured")
+                runOnMain { callback.onError("Recording failed — no audio captured") }
                 return@start
             }
 
@@ -107,14 +119,20 @@ class VoiceConversationManager(private val context: Context) {
      * Stop audio playback.
      */
     fun stopPlayback() {
-        try {
-            if (mediaPlayer?.isPlaying == true) {
-                mediaPlayer?.stop()
+        synchronized(playerLock) {
+            try {
+                mediaPlayer?.let { player ->
+                    if (player.isPlaying) {
+                        player.stop()
+                    }
+                    player.reset()
+                    player.release()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Playback stop error: ${e.message}")
+            } finally {
+                mediaPlayer = null
             }
-            mediaPlayer?.release()
-            mediaPlayer = null
-        } catch (e: Exception) {
-            Log.w(TAG, "Playback stop error: ${e.message}")
         }
     }
 
@@ -124,14 +142,25 @@ class VoiceConversationManager(private val context: Context) {
     fun stop() {
         stopRecording()
         stopPlayback()
-        currentWavFile?.delete()
+        try {
+            currentWavFile?.delete()
+        } catch (_: Exception) {}
     }
 
     fun isRecording(): Boolean = voiceRecorder.isRecording()
-    fun isPlaying(): Boolean = mediaPlayer?.isPlaying == true
+
+    fun isPlaying(): Boolean {
+        return synchronized(playerLock) {
+            try {
+                mediaPlayer?.isPlaying == true
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
 
     private fun sendAudioToServer(wavFile: File, callback: Callback) {
-        callback.onSendingToServer()
+        runOnMain { callback.onSendingToServer() }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -142,22 +171,28 @@ class VoiceConversationManager(private val context: Context) {
 
                 if (res.isSuccessful && res.body() != null) {
                     val body = res.body()!!
-                    callback.onResponseReceived(body.transcript, body.llm_response, body.tts_audio_url)
+                    runOnMain {
+                        callback.onResponseReceived(body.transcript, body.llm_response, body.tts_audio_url)
+                    }
                     body.tts_audio_url?.let { playAudioResponse(it, callback) }
                     return@launch
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Audio upload failed, using companion response", e)
             } finally {
-                wavFile.delete()
+                try {
+                    wavFile.delete()
+                } catch (_: Exception) {}
             }
 
             // Fallback audio response
-            callback.onResponseReceived(
-                "Voice Query",
-                "This is your daughter Sarah Varma. She visited you yesterday afternoon and brought your favorite blueberry muffins.",
-                null
-            )
+            runOnMain {
+                callback.onResponseReceived(
+                    "Voice Query",
+                    "I am right here with you. Everything is calm, safe, and sound.",
+                    null
+                )
+            }
         }
     }
 
@@ -168,27 +203,67 @@ class VoiceConversationManager(private val context: Context) {
             "${RetrofitClient.currentBaseUrl().trimEnd('/')}$audioUrl"
         }
 
-        callback.onAudioPlaybackStarted()
+        synchronized(playerLock) {
+            try {
+                mediaPlayer?.let {
+                    try {
+                        if (it.isPlaying) it.stop()
+                        it.reset()
+                        it.release()
+                    } catch (_: Exception) {}
+                }
 
-        try {
-            mediaPlayer?.release()
-            mediaPlayer = MediaPlayer().apply {
-                setDataSource(fullUrl)
-                setOnPreparedListener { start() }
-                setOnCompletionListener {
+                val player = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+                            .build()
+                    )
+                    setDataSource(fullUrl)
+                    setOnPreparedListener {
+                        runOnMain { callback.onAudioPlaybackStarted() }
+                        start()
+                    }
+                    setOnCompletionListener { p ->
+                        runOnMain { callback.onAudioPlaybackFinished() }
+                        synchronized(playerLock) {
+                            try {
+                                p.reset()
+                                p.release()
+                            } catch (_: Exception) {}
+                            if (mediaPlayer === p) {
+                                mediaPlayer = null
+                            }
+                        }
+                    }
+                    setOnErrorListener { p, what, extra ->
+                        Log.e(TAG, "MediaPlayer error: $what / $extra")
+                        runOnMain {
+                            callback.onError("Audio playback failed")
+                            callback.onAudioPlaybackFinished()
+                        }
+                        synchronized(playerLock) {
+                            try {
+                                p.reset()
+                                p.release()
+                            } catch (_: Exception) {}
+                            if (mediaPlayer === p) {
+                                mediaPlayer = null
+                            }
+                        }
+                        true
+                    }
+                    prepareAsync()
+                }
+                mediaPlayer = player
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to play audio", e)
+                runOnMain {
+                    callback.onError("Cannot play response audio")
                     callback.onAudioPlaybackFinished()
-                    it.release()
                 }
-                setOnErrorListener { _, what, extra ->
-                    Log.e(TAG, "MediaPlayer error: $what / $extra")
-                    callback.onError("Audio playback failed")
-                    true
-                }
-                prepareAsync()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to play audio", e)
-            callback.onError("Cannot play response audio")
         }
     }
 

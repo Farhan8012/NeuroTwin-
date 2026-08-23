@@ -7,7 +7,6 @@ import android.util.Log
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.io.RandomAccessFile
 
 /**
  * Records audio from the microphone and saves as WAV file.
@@ -16,10 +15,10 @@ import java.io.RandomAccessFile
 class VoiceRecorder {
 
     private var audioRecord: AudioRecord? = null
-    private var isRecording = false
+    @Volatile private var isRecording = false
     private var recordingThread: Thread? = null
+    private val lock = Any()
 
-    // 16kHz mono 16-bit PCM — matches Whisper's expected input
     companion object {
         const val SAMPLE_RATE = 16000
         const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
@@ -29,7 +28,7 @@ class VoiceRecorder {
 
     private val bufferSize: Int by lazy {
         val min = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
-        maxOf(min, SAMPLE_RATE * 2) // at least 1 second buffer
+        maxOf(min, SAMPLE_RATE * 2)
     }
 
     /**
@@ -37,36 +36,45 @@ class VoiceRecorder {
      * Returns the output File when recording stops via [onComplete].
      */
     fun start(outputFile: File, onComplete: (File?) -> Unit) {
-        if (isRecording) return
-
-        try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                SAMPLE_RATE,
-                CHANNEL_CONFIG,
-                AUDIO_FORMAT,
-                bufferSize
-            )
-
-            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-                Log.e(TAG, "AudioRecord failed to initialize")
-                onComplete(null)
-                return
+        synchronized(lock) {
+            if (isRecording) {
+                stop()
             }
 
-            isRecording = true
-            audioRecord?.startRecording()
+            try {
+                val record = AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
+                    SAMPLE_RATE,
+                    CHANNEL_CONFIG,
+                    AUDIO_FORMAT,
+                    bufferSize
+                )
 
-            recordingThread = Thread({
-                writeWavData(outputFile, onComplete)
-            }, "AudioRecorder Thread").also { it.start() }
+                if (record.state != AudioRecord.STATE_INITIALIZED) {
+                    Log.e(TAG, "AudioRecord failed to initialize")
+                    record.release()
+                    onComplete(null)
+                    return
+                }
 
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Microphone permission not granted", e)
-            onComplete(null)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start recording", e)
-            onComplete(null)
+                audioRecord = record
+                isRecording = true
+                record.startRecording()
+
+                recordingThread = Thread({
+                    writeWavData(record, outputFile, onComplete)
+                }, "AudioRecorder Thread").also { it.start() }
+
+            } catch (e: SecurityException) {
+                Log.e(TAG, "Microphone permission not granted", e)
+                isRecording = false
+                onComplete(null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to start recording", e)
+                isRecording = false
+                onComplete(null)
+            }
+            Unit
         }
     }
 
@@ -74,33 +82,52 @@ class VoiceRecorder {
      * Stop recording and finalize the WAV file.
      */
     fun stop() {
-        isRecording = false
-        try {
-            audioRecord?.stop()
-        } catch (e: Exception) {
-            Log.w(TAG, "AudioRecord stop error: ${e.message}")
+        synchronized(lock) {
+            if (!isRecording) return
+            isRecording = false
         }
-        audioRecord?.release()
-        audioRecord = null
+
+        try {
+            recordingThread?.join(1000)
+        } catch (e: Exception) {
+            Log.w(TAG, "Thread join error: ${e.message}")
+        }
+
+        synchronized(lock) {
+            try {
+                if (audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                    audioRecord?.stop()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "AudioRecord stop error: ${e.message}")
+            } finally {
+                try {
+                    audioRecord?.release()
+                } catch (_: Exception) {}
+                audioRecord = null
+                recordingThread = null
+            }
+            Unit
+        }
     }
 
     fun isRecording(): Boolean = isRecording
 
-    private fun writeWavData(outputFile: File, onComplete: (File?) -> Unit) {
+    private fun writeWavData(record: AudioRecord, outputFile: File, onComplete: (File?) -> Unit) {
         val pcmBuffer = ByteArrayOutputStream()
         val tempBuffer = ByteArray(bufferSize)
 
         try {
-            while (isRecording) {
-                val bytesRead = audioRecord?.read(tempBuffer, 0, tempBuffer.size) ?: -1
+            while (isRecording && record.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
+                val bytesRead = record.read(tempBuffer, 0, tempBuffer.size)
                 if (bytesRead > 0) {
                     pcmBuffer.write(tempBuffer, 0, bytesRead)
-                } else if (bytesRead == -1) {
+                } else if (bytesRead < 0) {
                     break
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Recording error", e)
+            Log.e(TAG, "Recording error in loop", e)
         }
 
         val pcmData = pcmBuffer.toByteArray()
@@ -109,7 +136,7 @@ class VoiceRecorder {
             return
         }
 
-        // Write WAV file with proper header
+        // Write WAV file with standard 44-byte RIFF header
         try {
             writeWavFile(outputFile, pcmData)
             onComplete(outputFile)
@@ -134,8 +161,8 @@ class VoiceRecorder {
 
             // fmt chunk
             fos.write("fmt ".toByteArray())
-            fos.write(intToLittleEndian(16)) // chunk size
-            fos.write(shortToLittleEndian(1)) // PCM format
+            fos.write(intToLittleEndian(16))
+            fos.write(shortToLittleEndian(1))
             fos.write(shortToLittleEndian(channels))
             fos.write(intToLittleEndian(SAMPLE_RATE))
             fos.write(intToLittleEndian(byteRate))
