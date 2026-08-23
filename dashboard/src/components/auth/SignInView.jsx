@@ -9,92 +9,120 @@ export function SignInView() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!email || !password) return
-    login(role, email.split('@')[0] || email)
+    const name = email.split('@')[0] || 'User'
+    login(role, name.charAt(0).toUpperCase() + name.slice(1))
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl border border-outline-variant/40 dark:border-slate-700 shadow-2xl p-8">
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-primary dark:bg-primary-fixed text-on-primary dark:text-primary flex items-center justify-center text-2xl font-extrabold mx-auto mb-3 shadow-md">
-            <span className="material-symbols-outlined text-[32px]">psychology</span>
-          </div>
-          <h2 className="text-2xl font-black tracking-tight text-primary dark:text-primary-fixed">Sign in to NeuroTwin</h2>
-          <p className="text-xs text-on-surface-variant dark:text-slate-400 mt-1">
-            Production Healthcare & Cognitive Memory Platform
-          </p>
+    <div style={{
+      minHeight: '100vh', minHeight: '100dvh',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      padding: '24px 16px',
+      background: 'linear-gradient(180deg, var(--nt-surface) 0%, var(--nt-surface-low) 100%)',
+    }}>
+      {/* Brand */}
+      <div style={{ textAlign: 'center', marginBottom: 40 }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 16,
+          background: 'var(--nt-primary-container)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 16px',
+        }}>
+          <span className="material-symbols-outlined" style={{ color: 'var(--nt-on-primary-container)', fontSize: 28 }}>psychology</span>
         </div>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--nt-primary)', letterSpacing: '-0.02em' }}>NeuroTwin</h1>
+        <p style={{ fontSize: 14, color: 'var(--nt-on-surface-variant)', marginTop: 4 }}>AI Cognitive & Memory Companion</p>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Sign In Card */}
+      <div className="nt-card" style={{ width: '100%', maxWidth: 400, padding: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--nt-on-surface)', marginBottom: 24 }}>Sign In</h2>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Role Selection */}
           <div>
-            <label className="text-xs font-bold text-on-surface-variant dark:text-slate-300 block mb-1">Email Address</label>
+            <label className="nt-label">I am a</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {['caregiver', 'patient'].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRole(r)}
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: 'var(--r-md)',
+                    border: `2px solid ${role === r ? 'var(--nt-primary)' : 'var(--nt-outline-variant)'}`,
+                    background: role === r ? 'var(--nt-primary-fixed)' : 'transparent',
+                    color: role === r ? 'var(--nt-primary)' : 'var(--nt-on-surface-variant)',
+                    fontWeight: 600, fontSize: 14,
+                    cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                    {r === 'caregiver' ? 'medical_services' : 'person'}
+                  </span>
+                  {r === 'caregiver' ? 'Caregiver' : 'Patient'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="nt-label">Email</label>
             <input
               type="email"
+              className="nt-input"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-surface-container-low dark:bg-slate-900 border border-outline-variant/50 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
               required
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-on-surface-variant dark:text-slate-300 block mb-1">Password</label>
+            <label className="nt-label">Password</label>
             <input
               type="password"
+              className="nt-input"
+              placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-surface-container-low dark:bg-slate-900 border border-outline-variant/50 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20"
               required
             />
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-on-surface-variant dark:text-slate-300 block mb-1">
-              Select your role <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="w-full bg-surface-container-low dark:bg-slate-900 border border-outline-variant/50 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 font-medium"
-            >
-              <option value="caregiver">Caregiver</option>
-              <option value="patient">Patient</option>
-            </select>
-          </div>
-
-          <div className="flex items-center justify-between text-xs pt-1">
-            <label className="flex items-center gap-2 text-on-surface-variant dark:text-slate-400 cursor-pointer">
-              <input type="checkbox" className="rounded text-primary" defaultChecked />
-              <span>Remember this device</span>
-            </label>
-            <button
-              type="button"
-              onClick={() => navigateTo('forgot-password')}
-              className="text-primary dark:text-primary-fixed font-bold hover:underline"
-            >
-              Forgot password?
-            </button>
           </div>
 
           <button
-            type="submit"
-            className="w-full py-3.5 bg-primary text-on-primary rounded-xl font-bold text-sm shadow-md hover:opacity-90 transition cursor-pointer"
+            type="button"
+            onClick={() => navigateTo('forgot-password')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: 600, color: 'var(--nt-primary)',
+              textAlign: 'right', padding: 0, fontFamily: 'Inter, sans-serif',
+            }}
           >
+            Forgot password?
+          </button>
+
+          <button type="submit" className="nt-btn nt-btn-primary" style={{ width: '100%' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>login</span>
             Sign In
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-outline-variant/20 dark:border-slate-700 text-center">
-          <p className="text-xs text-on-surface-variant dark:text-slate-400">
-            Don't have an account?{' '}
-            <button
-              onClick={() => navigateTo('signup')}
-              className="text-primary dark:text-primary-fixed font-bold hover:underline"
-            >
-              Create Account
-            </button>
-          </p>
+        <div style={{ textAlign: 'center', marginTop: 20 }}>
+          <span style={{ fontSize: 14, color: 'var(--nt-on-surface-variant)' }}>Don't have an account? </span>
+          <button
+            onClick={() => navigateTo('signup')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 14, fontWeight: 600, color: 'var(--nt-primary)',
+              fontFamily: 'Inter, sans-serif',
+            }}
+          >
+            Create Account
+          </button>
         </div>
       </div>
     </div>

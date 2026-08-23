@@ -1,102 +1,96 @@
 import React, { useState } from 'react'
-import { Card, Badge, Button } from '../common/UIPrimitives'
 import { useAppState } from '../../context/AppStateContext'
-import { FamilyMemberModal } from '../common/FamilyMemberModal'
 
 export function FamilyMembersView() {
-  const { familyMembers, activePatient, showToast, saveFamilyMember, deleteFamilyMember } = useAppState()
-  
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingMember, setEditingMember] = useState(null)
+  const { familyMembers, isLoadingFamily, saveFamilyMember, deleteFamilyMember, showToast } = useAppState()
+  const [showAdd, setShowAdd] = useState(false)
+  const [name, setName] = useState('')
+  const [relationship, setRelationship] = useState('')
+  const [phone, setPhone] = useState('')
+  const [isPrimary, setIsPrimary] = useState(false)
 
-  const handleSaveMember = async (memberData) => {
-    try {
-      await saveFamilyMember(editingMember ? { ...memberData, id: editingMember.id } : memberData)
-      showToast(editingMember ? 'Family member updated' : 'Family member added', 'success')
-    } catch (err) {
-      showToast(`Save failed: ${err.message}`, 'error')
-    }
-    setModalOpen(false)
-    setEditingMember(null)
+  const handleSave = async () => {
+    if (!name.trim()) { showToast('Please enter a name', 'error'); return }
+    await saveFamilyMember({ name, relationship, phone, is_primary: isPrimary })
+    setShowAdd(false); setName(''); setRelationship(''); setPhone(''); setIsPrimary(false)
   }
-
-  const handleDeleteMember = async (id) => {
-    await deleteFamilyMember(id)
-    showToast('Family member removed', 'info')
-  }
-
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">Care Circle & Family</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Authorized family members contributing memories and monitoring <strong>{activePatient.name}</strong>
-          </p>
-        </div>
-        <Button variant="primary" size="md" onClick={() => { setEditingMember(null); setModalOpen(true); }}>
-          ➕ Add Family Member
-        </Button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--nt-on-surface)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="material-symbols-outlined" style={{ color: 'var(--nt-primary)' }}>group</span>
+          Family & Friends
+        </h2>
+        <button className="nt-btn nt-btn-primary" onClick={() => setShowAdd(true)} style={{ fontSize: 13, padding: '10px 16px' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person_add</span> Add
+        </button>
       </div>
 
-      {/* Grid or Empty State */}
-      {familyMembers.length === 0 ? (
-        <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700">
-          <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600 mb-4 block">family_restroom</span>
-          <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300">No Family Members Yet</h3>
-          <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">
-            Build your care circle by adding loved ones. They will appear here and in the patient's companion app.
-          </p>
-          <Button variant="primary" className="mt-6 mx-auto block" onClick={() => { setEditingMember(null); setModalOpen(true); }}>
-            Add Loved One
-          </Button>
+      {isLoadingFamily ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[1,2,3].map(i => <div key={i} className="nt-skeleton" style={{ height: 80 }} />)}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {familyMembers.map((m) => (
-            <Card key={m.id} className="flex flex-col sm:flex-row items-start justify-between p-5 gap-4">
-              <div className="flex items-start gap-4">
-                <img src={m.avatar} alt={m.name} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-[#2B6CB0]/20" />
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{m.name}</h3>
-                    {m.role && <Badge variant={m.role.includes('Admin') ? 'primary' : 'secondary'}>{m.role}</Badge>}
+      ) : familyMembers.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {familyMembers.map((f) => (
+            <div key={f.id} className="nt-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--sp-md)', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: '50%',
+                  background: f.is_primary ? 'var(--nt-success-light)' : 'var(--nt-primary-fixed)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, fontWeight: 700, color: f.is_primary ? 'var(--nt-success-dark)' : 'var(--nt-primary)',
+                }}>
+                  {f.name.charAt(0)}
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--nt-on-surface)' }}>{f.name}</span>
+                    {f.is_primary && <span className="nt-badge nt-badge-success" style={{ fontSize: 10 }}>PRIMARY</span>}
                   </div>
-                  <p className="text-xs font-semibold text-[#2B6CB0] dark:text-[#63B3ED]">{m.relationship}</p>
-                  <p className="text-xs text-slate-500">
-                    {m.email && <span>{m.email} • </span>} 
-                    {m.phone}
-                  </p>
-                  {m.contributions && (
-                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 pt-1">
-                      ✨ {m.contributions}
-                    </p>
-                  )}
+                  <div style={{ fontSize: 13, color: 'var(--nt-on-surface-variant)' }}>{f.relationship}</div>
+                  {f.phone && <div style={{ fontSize: 12, color: 'var(--nt-secondary)' }}>{f.phone}</div>}
                 </div>
               </div>
-
-              <div className="flex flex-row sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-4 sm:mt-0">
-                <Button size="sm" variant="ghost" className="w-full sm:w-auto justify-center" onClick={() => { setEditingMember(m); setModalOpen(true); }}>
-                  Edit
-                </Button>
-                <Button size="sm" variant="ghost" className="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 w-full sm:w-auto justify-center" onClick={() => handleDeleteMember(m.id)}>
-                  Remove
-                </Button>
-              </div>
-            </Card>
+              <button className="nt-btn-ghost" onClick={() => deleteFamilyMember(f.id)} style={{ color: 'var(--nt-error)', padding: 6, minHeight: 'auto' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+              </button>
+            </div>
           ))}
+        </div>
+      ) : (
+        <div className="nt-empty">
+          <span className="material-symbols-outlined nt-empty-icon">group</span>
+          <h4 className="nt-empty-title">No family members yet</h4>
+          <p className="nt-empty-desc">Add family members and emergency contacts for the patient.</p>
+          <button className="nt-btn nt-btn-primary" onClick={() => setShowAdd(true)} style={{ marginTop: 8 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person_add</span> Add First Contact
+          </button>
         </div>
       )}
 
-      <FamilyMemberModal 
-        isOpen={modalOpen}
-        onClose={() => { setModalOpen(false); setEditingMember(null); }}
-        member={editingMember}
-        onSave={handleSaveMember}
-      />
+      {/* Add Family Member Modal */}
+      {showAdd && (
+        <div className="nt-modal-overlay" onClick={() => setShowAdd(false)}>
+          <div className="nt-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--nt-on-surface)', marginBottom: 16 }}>Add Family Member</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div><label className="nt-label">Full Name</label><input className="nt-input" value={name} onChange={e => setName(e.target.value)} placeholder="Sarah Varma" /></div>
+              <div><label className="nt-label">Relationship</label><input className="nt-input" value={relationship} onChange={e => setRelationship(e.target.value)} placeholder="Daughter" /></div>
+              <div><label className="nt-label">Phone Number</label><input className="nt-input" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 123-4567" type="tel" /></div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input type="checkbox" checked={isPrimary} onChange={e => setIsPrimary(e.target.checked)} style={{ width: 18, height: 18 }} />
+                <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--nt-on-surface)' }}>Primary emergency contact</span>
+              </label>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button className="nt-btn nt-btn-secondary" onClick={() => setShowAdd(false)} style={{ flex: 1 }}>Cancel</button>
+                <button className="nt-btn nt-btn-primary" onClick={handleSave} style={{ flex: 1 }}>Save Contact</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-

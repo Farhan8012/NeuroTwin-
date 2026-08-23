@@ -51,6 +51,15 @@ export const api = {
     request(`${V1}/emergency-contacts/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
   deleteEmergencyContact: (id) => request(`${V1}/emergency-contacts/${id}`, { method: 'DELETE' }),
 
+  // ── Photo albums ────────────────────────────────────
+  listAlbums: () => request(`${V1}/albums`),
+  createAlbum: (data) =>
+    request(`${V1}/albums`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  getAlbum: (id) => request(`${V1}/albums/${id}`),
+  updateAlbum: (id, data) =>
+    request(`${V1}/albums/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  deleteAlbum: (id) => request(`${V1}/albums/${id}`, { method: 'DELETE' }),
+
   // ── Objects / locations ─────────────────────────────
   listObjects: () => request(`${V1}/objects`),
   getObjectLocation: (objectClass) => request(`${V1}/objects/${encodeURIComponent(objectClass)}/location`),
