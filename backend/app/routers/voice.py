@@ -4,15 +4,54 @@ import time
 import os
 import tempfile
 import logging
+import uuid
+import threading
+from datetime import datetime, timezone
 from typing import Optional
 from app.schemas import VoiceQueryRequest, VoiceQueryResponse
 from app.services.llm_service import llm_service
 from app.services import tts_service, stt_service, context_cache
+from app.services import supabase_sync
 from app.config import settings
 from app.routers.metrics import record_voice_query
 
 router = APIRouter(prefix="/voice-query", tags=["Voice Pipeline"])
 logger = logging.getLogger(__name__)
+
+
+def _log_conversation_to_supabase(transcript: str, response: str, source: str = "voice", processing_ms: float = 0):
+    """Log conversation to Supabase 'conversations' table in background thread."""
+    if not supabase_sync.enabled():
+        return
+
+    def _run():
+        try:
+            import httpx
+            row = {
+                "id": str(uuid.uuid4()),
+                "transcript": transcript,
+                "response": response,
+                "source": source,
+                "processing_time_ms": processing_ms,
+                "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            }
+            url = f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/conversations"
+            headers = {
+                "apikey": settings.SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
+                "Content-Type": "application/json",
+                "Prefer": "return=minimal",
+            }
+            resp = httpx.post(url, json=row, headers=headers, timeout=5.0)
+            if resp.status_code in (200, 201):
+                logger.info("supabase ← conversation logged: %s...", transcript[:40])
+            else:
+                logger.warning("supabase conversation log failed (%d): %s", resp.status_code, resp.text[:200])
+        except Exception as exc:
+            logger.warning("supabase conversation log error: %s", exc)
+
+    threading.Thread(target=_run, daemon=True).start()
+
 
 
 async def _transcribe_audio(audio: UploadFile) -> str:
@@ -57,6 +96,9 @@ async def process_voice_query(request: VoiceQueryRequest):
     processing_ms = round((time.time() - start_time) * 1000, 2)
     record_voice_query(time.time() - start_time)
 
+    # Log to Supabase
+    _log_conversation_to_supabase(request.patient_query, response_text, source="text", processing_ms=processing_ms)
+
     return VoiceQueryResponse(
         transcript=request.patient_query,
         llm_response=response_text,
@@ -96,6 +138,9 @@ async def process_voice_audio(
     tts_audio_url = await _synthesize_tts(response_text)
     processing_ms = round((time.time() - start_time) * 1000, 2)
     record_voice_query(time.time() - start_time)
+
+    # Log to Supabase
+    _log_conversation_to_supabase(patient_query, response_text, source="audio", processing_ms=processing_ms)
 
     return VoiceQueryResponse(
         transcript=patient_query,

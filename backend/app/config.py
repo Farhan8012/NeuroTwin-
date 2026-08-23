@@ -22,8 +22,10 @@ class Settings(BaseSettings):
     # AI Engine Thresholds
     FACE_MATCH_THRESHOLD: float = 0.50
 
-    # LLM Engine ('groq' or 'ollama')
+    # LLM & Vision Engines
     LLM_PROVIDER: str = "groq"
+    VISION_PROVIDER: str = "gemini"    # 'gemini', 'groq', or 'local'
+    GEMINI_API_KEY: str = ""           # Free from https://aistudio.google.com/app/apikey
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "qwen3:8b"
     GROQ_API_KEY: str = ""

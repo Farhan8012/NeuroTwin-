@@ -60,6 +60,8 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import java.io.ByteArrayOutputStream
 import java.util.Calendar
 import java.util.concurrent.Executors
@@ -85,43 +87,53 @@ fun SeniorPatientMainScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFAFAFA))
+            .background(com.neurotwin.app.ui.theme.AppColors.background)
             .padding(16.dp)
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        val isDark = com.neurotwin.app.ui.theme.ThemeState.isDarkMode
+
         // Top Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = R.drawable.app_logo_zoomed),
+                    contentDescription = "NeuroTwin Logo",
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF2563EB)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("🧠", fontSize = 18.sp)
-                }
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
                 Text(
                     text = "NeuroTwin",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E293B)
+                    color = com.neurotwin.app.ui.theme.AppColors.textPrimary
                 )
             }
-            FilledTonalButton(
-                onClick = { AuthState.enter(Mode.CAREGIVER) },
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = Color(0xFFE2E8F0),
-                    contentColor = Color(0xFF334155)
-                )
-            ) {
-                Text("⚙️ Caregiver", fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                IconButton(onClick = { com.neurotwin.app.ui.theme.ThemeState.toggle(context) }) {
+                    Icon(
+                        if (isDark) Icons.Filled.LightMode else Icons.Filled.DarkMode,
+                        contentDescription = "Toggle Dark Mode",
+                        tint = if (isDark) Color(0xFFFBBF24) else Color(0xFF334155)
+                    )
+                }
+                FilledTonalButton(
+                    onClick = { AuthState.enter(Mode.CAREGIVER) },
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = com.neurotwin.app.ui.theme.AppColors.pillButtonBg,
+                        contentColor = com.neurotwin.app.ui.theme.AppColors.pillButtonText
+                    )
+                ) {
+                    Text("⚙️ Caregiver", fontWeight = FontWeight.Bold)
+                }
             }
         }
 
@@ -160,7 +172,13 @@ fun SeniorPatientMainScreen(
             voiceManager = voiceManager
         )
 
-        // SOS Immediate Help
+        // Live Camera Vision Section
+        LiveCameraVisionSection()
+
+        // AI Companion Chat Widget
+        AIChatWidget(voiceManager = voiceManager)
+
+        // SOS Immediate Help (Placed at bottom for easy emergency access)
         SOSCard(
             contactsResult = vm.contacts,
             onSosTriggered = {
@@ -174,12 +192,6 @@ fun SeniorPatientMainScreen(
                 }
             }
         )
-
-        // Live Camera Vision Section
-        LiveCameraVisionSection()
-
-        // AI Companion Chat Widget
-        AIChatWidget(voiceManager = voiceManager)
 
         Spacer(modifier = Modifier.height(24.dp))
     }
@@ -202,15 +214,15 @@ fun SeniorPatientMainScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         meds.forEach { m ->
                             Card(
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                                colors = CardDefaults.cardColors(containerColor = com.neurotwin.app.ui.theme.AppColors.cardAlt),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
-                                    Text("${m.name} — ${m.dosage}", fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
-                                    Text("🕒 ${m.scheduleTime}", fontSize = 13.sp, color = Color(0xFF2563EB))
+                                    Text("${m.name} — ${m.dosage}", fontWeight = FontWeight.Bold, color = com.neurotwin.app.ui.theme.AppColors.textPrimary)
+                                    Text("🕒 ${m.scheduleTime}", fontSize = 13.sp, color = Color(0xFF3B82F6))
                                     if (m.instructions.isNotBlank()) {
-                                        Text("📝 ${m.instructions}", fontSize = 12.sp, color = Color(0xFF64748B))
+                                        Text("📝 ${m.instructions}", fontSize = 12.sp, color = com.neurotwin.app.ui.theme.AppColors.textSecondary)
                                     }
                                 }
                             }
@@ -296,61 +308,192 @@ fun GreetingBanner(
     onTalkClick: () -> Unit,
     onMemoriesClick: () -> Unit
 ) {
-    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    val greeting = when {
-        hour < 12 -> "Good Morning"
-        hour < 17 -> "Good Afternoon"
-        else -> "Good Evening"
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("neurotwin_prefs", Context.MODE_PRIVATE) }
+    var pfpUri by remember { mutableStateOf(prefs.getString("patient_pfp_uri", null)) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            pfpUri = uri.toString()
+            prefs.edit().putString("patient_pfp_uri", uri.toString()).apply()
+            Toast.makeText(context, "Profile photo updated", Toast.LENGTH_SHORT).show()
+        }
     }
+
+    val isDark = com.neurotwin.app.ui.theme.ThemeState.isDarkMode
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2563EB)),
+        colors = CardDefaults.cardColors(containerColor = com.neurotwin.app.ui.theme.AppColors.card),
         shape = RoundedCornerShape(20.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("🌞", fontSize = 28.sp)
-                Text(
-                    text = "$greeting!",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Today is a peaceful day. NeuroTwin is with you and keeping watch.",
-                fontSize = 15.sp,
-                color = Color.White.copy(alpha = 0.95f),
-                lineHeight = 22.sp
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Profile Picture with Add/Change PFP feature
+            Box(
+                modifier = Modifier
+                    .size(92.dp)
+                    .clickable { photoPickerLauncher.launch("image/*") },
+                contentAlignment = Alignment.BottomEnd
             ) {
-                Button(
-                    onClick = onTalkClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.2f)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Filled.Psychology, contentDescription = null, tint = Color.White)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Talk to Twin", color = Color.White, fontWeight = FontWeight.Bold)
+                if (pfpUri != null) {
+                    AsyncImage(
+                        model = pfpUri,
+                        contentDescription = "Farhan Profile Picture",
+                        modifier = Modifier
+                            .size(92.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder, CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(92.dp)
+                            .clip(CircleShape)
+                            .background(com.neurotwin.app.ui.theme.AppColors.cardAlt)
+                            .border(2.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Filled.Person,
+                                contentDescription = "Add Profile Picture",
+                                tint = com.neurotwin.app.ui.theme.AppColors.textSecondary,
+                                modifier = Modifier.size(44.dp)
+                            )
+                        }
+                    }
                 }
-                Button(
-                    onClick = onMemoriesClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
+
+                // Add / Edit Camera Badge
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF2563EB))
+                        .border(2.dp, if (isDark) Color(0xFF141619) else Color.White, CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.PhotoLibrary, contentDescription = null, tint = Color(0xFF2563EB))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Memories", color = Color(0xFF2563EB), fontWeight = FontWeight.Bold)
+                    Icon(
+                        Icons.Filled.AddPhotoAlternate,
+                        contentDescription = "Change photo",
+                        tint = Color.White,
+                        modifier = Modifier.size(15.dp)
+                    )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Patient Name
+            Text(
+                text = "Farhan",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = com.neurotwin.app.ui.theme.AppColors.textPrimary
+            )
+
+            // Patient Status Subtitle
+            Text(
+                text = "Status: Active • Routine Monitored",
+                fontSize = 13.sp,
+                color = com.neurotwin.app.ui.theme.AppColors.textSecondary
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Pills (Status: Stable, Living Room)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isDark) Color(0xFF064E3B) else Color(0xFFECFDF5),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color(0xFF047857) else Color(0xFFA7F3D0))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF10B981))
+                        )
+                        Text(
+                            text = "Status: Stable",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isDark) Color(0xFFA7F3D0) else Color(0xFF065F46)
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = if (isDark) Color(0xFF1E3A8A) else Color(0xFFEFF6FF),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color(0xFF1D4ED8) else Color(0xFFBFDBFE))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Filled.LocationOn,
+                            contentDescription = null,
+                            tint = if (isDark) Color(0xFF93C5FD) else Color(0xFF2563EB),
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "Living Room",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isDark) Color(0xFF93C5FD) else Color(0xFF1E40AF)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Live Session Action Button (Matching Screenshot 1)
+            Button(
+                onClick = onTalkClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = com.neurotwin.app.ui.theme.AppColors.liveSessionBtn,
+                    contentColor = com.neurotwin.app.ui.theme.AppColors.liveSessionBtnText
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Videocam,
+                    contentDescription = null,
+                    tint = com.neurotwin.app.ui.theme.AppColors.liveSessionBtnText,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Live Session",
+                    color = com.neurotwin.app.ui.theme.AppColors.liveSessionBtnText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
             }
         }
     }
@@ -361,10 +504,13 @@ fun MedicationsSection(
     vm: CaregiverViewModel,
     onViewAllClick: () -> Unit
 ) {
+    val isDark = com.neurotwin.app.ui.theme.ThemeState.isDarkMode
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = com.neurotwin.app.ui.theme.AppColors.card),
         shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -375,10 +521,10 @@ fun MedicationsSection(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Filled.Medication, contentDescription = null, tint = Color(0xFF2563EB))
-                    Text("Today's Medications", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Today's Medications", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = com.neurotwin.app.ui.theme.AppColors.textPrimary)
                 }
                 TextButton(onClick = onViewAllClick) {
-                    Text("View All →", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                    Text("View All →", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3B82F6))
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -399,14 +545,15 @@ fun MedicationsSection(
                 }
                 is ApiResult.Success -> {
                     if (r.data.isEmpty()) {
-                        Text("No medications scheduled for today.", color = Color.Gray, modifier = Modifier.padding(vertical = 12.dp))
+                        Text("No medications scheduled for today.", color = com.neurotwin.app.ui.theme.AppColors.textSecondary, modifier = Modifier.padding(vertical = 12.dp))
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             r.data.take(3).forEach { m ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
+                                        .background(com.neurotwin.app.ui.theme.AppColors.cardAlt, RoundedCornerShape(10.dp))
+                                        .border(1.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder, RoundedCornerShape(10.dp))
                                         .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -414,15 +561,15 @@ fun MedicationsSection(
                                         modifier = Modifier
                                             .size(36.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0xFFEFF6FF)),
+                                            .background(if (isDark) Color(0xFF1E293B) else Color(0xFFEFF6FF)),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(Icons.Filled.Schedule, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(20.dp))
+                                        Icon(Icons.Filled.Schedule, contentDescription = null, tint = Color(0xFF3B82F6), modifier = Modifier.size(20.dp))
                                     }
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("${m.name} — ${m.dosage}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1E293B))
-                                        Text(m.scheduleTime, fontSize = 12.sp, color = Color(0xFF64748B))
+                                        Text("${m.name} — ${m.dosage}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = com.neurotwin.app.ui.theme.AppColors.textPrimary)
+                                        Text(m.scheduleTime, fontSize = 12.sp, color = com.neurotwin.app.ui.theme.AppColors.textSecondary)
                                     }
                                 }
                             }
@@ -439,10 +586,13 @@ fun FamilySection(
     vm: CaregiverViewModel,
     onPersonClick: (Person) -> Unit
 ) {
+    val isDark = com.neurotwin.app.ui.theme.ThemeState.isDarkMode
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = com.neurotwin.app.ui.theme.AppColors.card),
         shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -453,11 +603,11 @@ fun FamilySection(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Filled.FamilyRestroom, contentDescription = null, tint = Color(0xFF2563EB))
-                    Text("Family & Friends", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                    Text("Family & Friends", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = com.neurotwin.app.ui.theme.AppColors.textPrimary)
                 }
                 if (vm.people is ApiResult.Failure) {
                     TextButton(onClick = { vm.refreshPeople() }) {
-                        Text("Retry", fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                        Text("Retry", fontWeight = FontWeight.Bold, color = Color(0xFF3B82F6))
                     }
                 }
             }
@@ -482,7 +632,7 @@ fun FamilySection(
                 }
                 is ApiResult.Success -> {
                     if (r.data.isEmpty()) {
-                        Text("Your loved ones will appear here.", color = Color.Gray, modifier = Modifier.padding(vertical = 12.dp))
+                        Text("Your loved ones will appear here.", color = com.neurotwin.app.ui.theme.AppColors.textSecondary, modifier = Modifier.padding(vertical = 12.dp))
                     } else {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(r.data) { f ->
@@ -490,8 +640,8 @@ fun FamilySection(
                                     modifier = Modifier
                                         .width(170.dp)
                                         .clickable { onPersonClick(f) },
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0)),
+                                    colors = CardDefaults.cardColors(containerColor = com.neurotwin.app.ui.theme.AppColors.cardAlt),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Row(
@@ -502,7 +652,7 @@ fun FamilySection(
                                             modifier = Modifier
                                                 .size(44.dp)
                                                 .clip(CircleShape)
-                                                .background(Color(0xFFDBEAFE)),
+                                                .background(if (isDark) Color(0xFF1E293B) else Color(0xFFDBEAFE)),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             if (f.photoUrls.isNotEmpty()) {
@@ -517,7 +667,7 @@ fun FamilySection(
                                                     text = f.name.take(1),
                                                     fontSize = 18.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFF2563EB)
+                                                    color = if (isDark) Color(0xFF93C5FD) else Color(0xFF2563EB)
                                                 )
                                             }
                                         }
@@ -527,7 +677,7 @@ fun FamilySection(
                                                 text = f.name,
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFF1E293B),
+                                                color = com.neurotwin.app.ui.theme.AppColors.textPrimary,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
@@ -554,14 +704,15 @@ fun FeaturedMemorySection(
     vm: CaregiverViewModel,
     voiceManager: VoiceConversationManager
 ) {
+    val isDark = com.neurotwin.app.ui.theme.ThemeState.isDarkMode
     val memoriesRes = vm.memories
     if (memoriesRes is ApiResult.Success && memoriesRes.data.isNotEmpty()) {
         val memory = memoriesRes.data.first()
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(2.dp, Color(0xFFDBEAFE), RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+                .border(1.dp, if (isDark) Color(0xFF1E3A8A) else Color(0xFFDBEAFE), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = com.neurotwin.app.ui.theme.AppColors.card),
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
@@ -573,7 +724,7 @@ fun FeaturedMemorySection(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Filled.Favorite, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(18.dp))
-                        Text("FEATURED MEMORY", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB), letterSpacing = 1.sp)
+                        Text("FEATURED MEMORY", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isDark) Color(0xFF93C5FD) else Color(0xFF2563EB), letterSpacing = 1.sp)
                     }
                     IconButton(onClick = {
                         voiceManager.sendTextQuery(
@@ -581,14 +732,14 @@ fun FeaturedMemorySection(
                             object : VoiceConversationManager.Callback {}
                         )
                     }) {
-                        Icon(Icons.Filled.VolumeUp, contentDescription = "Listen", tint = Color(0xFF2563EB))
+                        Icon(Icons.Filled.VolumeUp, contentDescription = "Listen", tint = if (isDark) Color(0xFF93C5FD) else Color(0xFF2563EB))
                     }
                 }
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(memory.title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E293B))
+                Text(memory.title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = com.neurotwin.app.ui.theme.AppColors.textPrimary)
                 memory.description?.let {
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(it, fontSize = 14.sp, color = Color(0xFF475569), lineHeight = 20.sp)
+                    Text(it, fontSize = 14.sp, color = com.neurotwin.app.ui.theme.AppColors.textSecondary, lineHeight = 20.sp)
                 }
             }
         }
@@ -606,42 +757,51 @@ fun SOSCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, Color(0xFFEF4444), RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
+            .padding(vertical = 6.dp)
+            .border(1.5.dp, com.neurotwin.app.ui.theme.AppColors.sosCardBorder, RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = com.neurotwin.app.ui.theme.AppColors.sosCard),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.weight(1f).padding(end = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
                         .background(Color(0xFFFEE2E2)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.Sos, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(28.dp))
+                    Icon(Icons.Filled.Sos, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(24.dp))
                 }
                 Column {
-                    Text("Need Immediate Help?", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF991B1B))
+                    Text("Emergency Help", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = com.neurotwin.app.ui.theme.AppColors.sosTitle)
                     Text(
-                        text = if (primaryContact != null) "Call ${primaryContact.name} (${primaryContact.relationship})" else "Tap to alert your care team",
-                        fontSize = 12.sp,
-                        color = Color(0xFFEF4444)
+                        text = if (primaryContact != null) "Call ${primaryContact.name}" else "Tap to alert care team",
+                        fontSize = 11.sp,
+                        color = com.neurotwin.app.ui.theme.AppColors.sosText,
+                        maxLines = 1
                     )
                 }
             }
             Button(
                 onClick = onSosTriggered,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                shape = RoundedCornerShape(10.dp)
+                colors = ButtonDefaults.buttonColors(containerColor = com.neurotwin.app.ui.theme.AppColors.sosButton),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                Icon(Icons.Filled.Call, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                Icon(Icons.Filled.Call, contentDescription = null, modifier = Modifier.size(15.dp), tint = com.neurotwin.app.ui.theme.AppColors.sosButtonText)
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("CALL SOS", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("CALL SOS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = com.neurotwin.app.ui.theme.AppColors.sosButtonText)
             }
         }
     }
@@ -654,6 +814,7 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
     var isPlaying by remember { mutableStateOf(false) }
     var responseText by remember { mutableStateOf<String?>(null) }
     var activeQuery by remember { mutableStateOf<String?>(null) }
+    val isDark = com.neurotwin.app.ui.theme.ThemeState.isDarkMode
 
     val recordButtonColor by animateColorAsState(
         if (isRecording) Color(0xFFEF4444) else Color(0xFF2563EB)
@@ -670,7 +831,8 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = com.neurotwin.app.ui.theme.AppColors.card),
+        border = androidx.compose.foundation.BorderStroke(1.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -679,13 +841,13 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF1E293B))
+                    .background(if (isDark) Color(0xFF111827) else Color(0xFF1E293B))
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(
-                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF334155)),
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(if (isDark) Color(0xFF1F2937) else Color(0xFF334155)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text("🤖", fontSize = 20.sp)
@@ -712,7 +874,7 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
 
             // Quick Questions Chips
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("Quick Questions:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF64748B))
+                Text("Quick Questions:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = com.neurotwin.app.ui.theme.AppColors.textSecondary)
                 Spacer(modifier = Modifier.height(6.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(quickQuestions) { q ->
@@ -739,9 +901,10 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                             },
                             label = { Text(q, fontSize = 12.sp, fontWeight = FontWeight.Medium) },
                             colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = Color(0xFFF1F5F9),
-                                labelColor = Color(0xFF1E293B)
-                            )
+                                containerColor = com.neurotwin.app.ui.theme.AppColors.cardAlt,
+                                labelColor = com.neurotwin.app.ui.theme.AppColors.textPrimary
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder)
                         )
                     }
                 }
@@ -752,22 +915,22 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 120.dp, max = 220.dp)
-                    .background(Color(0xFFF8FAFC))
+                    .background(com.neurotwin.app.ui.theme.AppColors.cardAlt)
                     .padding(14.dp)
             ) {
                 if (responseText != null) {
                     Column {
                         activeQuery?.let {
-                            Text("Q: $it", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF64748B))
+                            Text("Q: $it", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = com.neurotwin.app.ui.theme.AppColors.textSecondary)
                             Spacer(modifier = Modifier.height(4.dp))
                         }
                         Box(
                             modifier = Modifier
-                                .background(Color.White, RoundedCornerShape(12.dp))
-                                .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                                .background(com.neurotwin.app.ui.theme.AppColors.card, RoundedCornerShape(12.dp))
+                                .border(1.dp, com.neurotwin.app.ui.theme.AppColors.cardBorder, RoundedCornerShape(12.dp))
                                 .padding(12.dp)
                         ) {
-                            Text(responseText!!, fontSize = 15.sp, color = Color(0xFF1E293B), lineHeight = 22.sp)
+                            Text(responseText!!, fontSize = 15.sp, color = com.neurotwin.app.ui.theme.AppColors.textPrimary, lineHeight = 22.sp)
                         }
                     }
                 } else if (isSending) {
@@ -777,18 +940,18 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Text("Thinking...", color = Color(0xFF64748B), fontSize = 14.sp)
+                        Text("Thinking...", color = com.neurotwin.app.ui.theme.AppColors.textSecondary, fontSize = 14.sp)
                     }
                 } else {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Filled.Mic, contentDescription = null, tint = Color(0xFFCBD5E1), modifier = Modifier.size(36.dp))
+                        Icon(Icons.Filled.Mic, contentDescription = null, tint = com.neurotwin.app.ui.theme.AppColors.textSecondary, modifier = Modifier.size(36.dp))
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = "Tap a question above or hold the microphone button to talk",
-                            color = Color(0xFF94A3B8),
+                            color = com.neurotwin.app.ui.theme.AppColors.textSecondary,
                             textAlign = TextAlign.Center,
                             fontSize = 13.sp
                         )
@@ -796,16 +959,16 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                 }
             }
 
-            // Action Bar: Hold or Tap to Record
+            // Action Bar: Hold to Talk
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
+                    .background(com.neurotwin.app.ui.theme.AppColors.card)
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Large Hold to Talk Button
+                // Hold to Talk Button
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -818,12 +981,13 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                                 onPress = {
                                     isRecording = true
                                     responseText = null
-                                    activeQuery = "Spoken Query"
+                                    activeQuery = "Listening..."
                                     voiceManager.startConversationFromRecording(
                                         object : VoiceConversationManager.Callback {
                                             override fun onRecordingStopped() {
                                                 isRecording = false
                                                 isSending = true
+                                                activeQuery = "Processing..."
                                             }
                                             override fun onResponseReceived(t: String, r: String, a: String?) {
                                                 isSending = false
@@ -834,7 +998,10 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                                             override fun onAudioPlaybackFinished() { isPlaying = false }
                                             override fun onError(m: String) {
                                                 isRecording = false
-                                                                         Toast.makeText(context, "Voice error: $m", Toast.LENGTH_SHORT).show()
+                                                isSending = false
+                                                activeQuery = "Error"
+                                                responseText = m
+                                                Toast.makeText(context, "Voice error: $m", Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     )
@@ -849,7 +1016,11 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Filled.Mic, contentDescription = null, tint = Color.White)
                         Text(
-                            text = if (isRecording) "Release to Send" else "Hold to Talk",
+                            text = when {
+                                isRecording -> "Release to Send"
+                                isSending -> "Processing..."
+                                else -> "Hold to Talk"
+                            },
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
@@ -877,10 +1048,31 @@ fun AIChatWidget(voiceManager: VoiceConversationManager) {
 @Composable
 fun LiveCameraVisionSection() {
     val context = LocalContext.current
+    val isDark = com.neurotwin.app.ui.theme.ThemeState.isDarkMode
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Runtime camera permission check
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            android.content.pm.PackageManager.PERMISSION_GRANTED ==
+                androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.CAMERA)
+        )
+    }
+    val cameraPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCameraPermission = granted
+    }
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) {
+            cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
+    }
+
     var isCameraExpanded by remember { mutableStateOf(true) }
     var recognizedPersonName by remember { mutableStateOf<String?>(null) }
     var recognizedRelation by remember { mutableStateOf<String?>(null) }
+    var liveObjectsText by remember { mutableStateOf<String?>(null) }
     var isUploading by remember { mutableStateOf(false) }
     var cameraFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
     val isProcessing = remember { AtomicBoolean(false) }
@@ -891,8 +1083,8 @@ fun LiveCameraVisionSection() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, Color(0xFF10B981).copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+            .border(1.5.dp, if (isDark) Color(0xFF047857) else Color(0xFF10B981).copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = com.neurotwin.app.ui.theme.AppColors.card),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -928,7 +1120,7 @@ fun LiveCameraVisionSection() {
                         },
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(Icons.Filled.Cameraswitch, contentDescription = "Flip Camera", tint = Color(0xFF475569), modifier = Modifier.size(18.dp))
+                        Icon(Icons.Filled.Cameraswitch, contentDescription = "Flip Camera", tint = com.neurotwin.app.ui.theme.AppColors.textSecondary, modifier = Modifier.size(18.dp))
                     }
                     IconButton(
                         onClick = { isCameraExpanded = !isCameraExpanded },
@@ -937,7 +1129,7 @@ fun LiveCameraVisionSection() {
                         Icon(
                             if (isCameraExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                             contentDescription = "Toggle Preview",
-                            tint = Color(0xFF475569),
+                            tint = com.neurotwin.app.ui.theme.AppColors.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -951,27 +1143,49 @@ fun LiveCameraVisionSection() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFF1F5F9))
+                    .background(com.neurotwin.app.ui.theme.AppColors.cardAlt)
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text("👁️", fontSize = 14.sp)
                 Text(
-                    text = if (recognizedPersonName != null) {
-                        "Seeing: $recognizedPersonName ($recognizedRelation)"
-                    } else if (isUploading) {
-                        "Analyzing live visual stream..."
-                    } else {
-                        "Camera connected to AI model • Ready"
+                    text = when {
+                        recognizedPersonName != null -> "Seeing: $recognizedPersonName ($recognizedRelation)"
+                        liveObjectsText != null -> liveObjectsText!!
+                        isUploading -> "Analyzing live visual stream..."
+                        else -> "Camera connected to AI model • Ready"
                     },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (recognizedPersonName != null) Color(0xFF047857) else Color(0xFF475569)
+                    color = if (recognizedPersonName != null) (if (isDark) Color(0xFFA7F3D0) else Color(0xFF047857)) else com.neurotwin.app.ui.theme.AppColors.textSecondary
                 )
             }
 
-            if (isCameraExpanded) {
+            if (isCameraExpanded && !hasCameraPermission) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(com.neurotwin.app.ui.theme.AppColors.cardAlt)
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = com.neurotwin.app.ui.theme.AppColors.textSecondary, modifier = Modifier.size(36.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Camera permission is required", fontSize = 14.sp, color = com.neurotwin.app.ui.theme.AppColors.textPrimary)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = { cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                    ) {
+                        Text("Grant Camera Access")
+                    }
+                }
+            }
+
+            if (isCameraExpanded && hasCameraPermission) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Box(
                     modifier = Modifier
@@ -1011,10 +1225,24 @@ fun LiveCameraVisionSection() {
                                                 kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
                                                     try {
                                                         val res = RetrofitClient.instance.uploadFrame(part)
-                                                        if (res.isSuccessful && res.body()?.matched == true) {
-                                                            val p = res.body()?.person
-                                                            recognizedPersonName = p?.get("name") as? String
-                                                            recognizedRelation = p?.get("relationship") as? String
+                                                        if (res.isSuccessful) {
+                                                            val body = res.body()
+                                                            if (body?.matched == true) {
+                                                                val p = body.person
+                                                                recognizedPersonName = p?.get("name") as? String
+                                                                recognizedRelation = p?.get("relationship") as? String
+                                                                liveObjectsText = null
+                                                            } else {
+                                                                recognizedPersonName = null
+                                                                recognizedRelation = null
+                                                                val objs = body?.detected_objects
+                                                                if (!objs.isNullOrEmpty()) {
+                                                                    val labels = objs.mapNotNull { it["label"] as? String }.distinct().take(3)
+                                                                    liveObjectsText = "Seeing: " + labels.joinToString(", ")
+                                                                } else {
+                                                                    liveObjectsText = "Camera stream active"
+                                                                }
+                                                            }
                                                         }
                                                     } catch (_: Exception) {
                                                     } finally {

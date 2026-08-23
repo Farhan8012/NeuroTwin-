@@ -111,12 +111,25 @@ fun ErrorRetryBox(message: String, onRetry: () -> Unit) {
 fun EmptyState(icon: String, message: String, hint: String? = null) {
     Box(Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(icon, fontSize = 36.sp)
-            Spacer(Modifier.height(8.dp))
-            Text(message, fontWeight = FontWeight.SemiBold)
+            Text(icon, fontSize = 40.sp)
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = message,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
             if (hint != null) {
-                Text(hint, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = hint,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 28.dp),
+                    lineHeight = 18.sp
+                )
             }
         }
     }

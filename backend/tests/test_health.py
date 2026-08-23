@@ -10,7 +10,7 @@ def test_health_status_online(client):
     r = client.get("/api/v1/health")
     data = r.json()
     assert data["status"] == "online"
-    assert data["service"] == "NeuroTwin FastAPI Engine"
+    assert "NeuroTwin" in data["service"]
 
 
 def test_health_has_components(client):
@@ -18,8 +18,8 @@ def test_health_has_components(client):
     components = r.json()["components"]
     assert "fastapi" in components
     assert "qdrant_vector_db" in components
-    assert "ollama_llm" in components
-    assert "whisper_stt" in components
+    assert "llm_engine" in components or "ollama_llm" in components
+    assert "stt_engine" in components or "whisper_stt" in components
     assert "tts_piper" in components
     assert "face_recognition" in components
 

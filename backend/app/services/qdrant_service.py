@@ -38,32 +38,32 @@ class QdrantService:
                 self.client = QdrantClient(
                     url=settings.QDRANT_URL,
                     api_key=settings.QDRANT_API_KEY if settings.QDRANT_API_KEY else None,
-                    timeout=10.0
+                    timeout=2.0
                 )
-                self._init_collections()
+                self._init_collections(strict=True)
                 self.is_connected = True
                 logger.info("Connected to Qdrant Cloud at %s", settings.QDRANT_URL)
                 return
             except Exception as e:
-                logger.warning("Qdrant Cloud connection failed: %s. Falling back to local Qdrant.", e)
+                logger.warning("Qdrant Cloud connection failed: %s. Falling back to local/in-memory Qdrant.", e)
 
         # 2. Attempt local Qdrant service
         try:
-            self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT, timeout=5.0)
-            self._init_collections()
+            self.client = QdrantClient(host=settings.QDRANT_HOST, port=settings.QDRANT_PORT, timeout=1.0)
+            self._init_collections(strict=True)
             self.is_connected = True
             logger.info("Connected to local Qdrant at %s:%d", settings.QDRANT_HOST, settings.QDRANT_PORT)
         except Exception as e:
             logger.warning("Local Qdrant DB connection failed, using in-memory mode: %s", e)
             self.client = QdrantClient(":memory:")
-            self._init_collections()
+            self._init_collections(strict=False)
             self.is_connected = False
 
     # ------------------------------------------------------------------
     # Collection initialisation
     # ------------------------------------------------------------------
 
-    def _init_collections(self):
+    def _init_collections(self, strict: bool = False):
         """Create *people* (512-d face vectors) and *objects* collections if absent."""
         try:
             collections = [c.name for c in self.client.get_collections().collections]
@@ -83,6 +83,8 @@ class QdrantService:
                 logger.info("Created Qdrant collection: %s", settings.QDRANT_COLLECTION_OBJECTS)
         except Exception as e:
             logger.error("Failed initialising Qdrant collections: %s", e)
+            if strict:
+                raise e
 
     # ------------------------------------------------------------------
     # People collection

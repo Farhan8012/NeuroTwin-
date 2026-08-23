@@ -1,3 +1,6 @@
+from app.services.dns_patch import apply_dns_patch
+apply_dns_patch()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

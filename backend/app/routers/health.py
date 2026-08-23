@@ -13,12 +13,9 @@ router = APIRouter(prefix="/health", tags=["Health & Telemetry"])
 def _qdrant_status() -> str:
     if getattr(qdrant_service, "is_connected", False):
         return "connected (Qdrant Cloud)" if settings.QDRANT_URL else "connected (local)"
-    try:
-        if hasattr(qdrant_service, "client") and qdrant_service.client:
-            return "connected (Qdrant Cloud)" if settings.QDRANT_URL else "connected (local)"
-        return "disconnected"
-    except Exception:
-        return "disconnected"
+    if hasattr(qdrant_service, "client") and qdrant_service.client:
+        return "connected (in-memory)"
+    return "disconnected"
 
 
 async def _llm_status() -> str:

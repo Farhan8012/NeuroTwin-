@@ -16,6 +16,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.neurotwin.app.auth.AuthState
@@ -60,6 +64,7 @@ class MainActivity : ComponentActivity() {
 
         RetrofitClient.init(this)
         AuthState.rememberContext(this)
+        com.neurotwin.app.ui.theme.ThemeState.init(this)
 
         voiceManager = VoiceConversationManager(this)
 
@@ -77,17 +82,23 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
-                    val mode = AuthState.session.collectAsState().value.mode
-                    when (mode) {
-                        null -> ModeSelectScreen()
-                        Mode.CAREGIVER -> {
-                            // Cancel watchdog — no services needed in caregiver mode
-                            ServiceRestartWorker.cancel(this@MainActivity)
-                            CaregiverApp()
-                        }
-                        Mode.PATIENT -> {
-                            ensurePermissions()
-                            SeniorPatientMainScreen(voiceManager)
+                    var showSplash by remember { mutableStateOf(true) }
+
+                    if (showSplash) {
+                        com.neurotwin.app.ui.screens.SplashScreen(onAnimationFinished = { showSplash = false })
+                    } else {
+                        val mode = AuthState.session.collectAsState().value.mode
+                        when (mode) {
+                            null -> ModeSelectScreen()
+                            Mode.CAREGIVER -> {
+                                // Cancel watchdog — no services needed in caregiver mode
+                                ServiceRestartWorker.cancel(this@MainActivity)
+                                CaregiverApp()
+                            }
+                            Mode.PATIENT -> {
+                                ensurePermissions()
+                                SeniorPatientMainScreen(voiceManager)
+                            }
                         }
                     }
                 }

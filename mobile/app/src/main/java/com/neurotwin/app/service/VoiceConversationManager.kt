@@ -5,6 +5,8 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import com.neurotwin.app.network.RetrofitClient
 import kotlinx.coroutines.CoroutineScope
@@ -14,21 +16,46 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
+import java.util.Locale
 
 /**
  * Manages the full voice conversation loop:
  * 1. Record patient's speech (VoiceRecorder → WAV)
  * 2. Upload WAV to POST /api/v1/voice-query/audio
- * 3. Server runs Groq Whisper STT → Groq LLM → Piper TTS
- * 4. Play back the TTS audio response safely
+ * 3. Server runs Groq Whisper STT → Unified LLM → Edge-TTS
+ * 4. Ultra-fast instant playback with Android on-device TextToSpeech fallback
  */
-class VoiceConversationManager(private val context: Context) {
+class VoiceConversationManager(private val context: Context) : TextToSpeech.OnInitListener {
 
     private val voiceRecorder = VoiceRecorder()
     private var mediaPlayer: MediaPlayer? = null
     private var currentWavFile: File? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val playerLock = Any()
+
+    private var androidTts: TextToSpeech? = null
+    private var ttsReady = false
+
+    init {
+        try {
+            androidTts = TextToSpeech(context.applicationContext, this)
+        } catch (e: Exception) {
+            Log.w(TAG, "Android TextToSpeech init exception: ${e.message}")
+        }
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            val result = androidTts?.setLanguage(Locale.US)
+            ttsReady = result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED
+            androidTts?.setSpeechRate(0.95f)
+            androidTts?.setPitch(1.0f)
+            Log.i(TAG, "Android TextToSpeech initialized (ready=$ttsReady)")
+        } else {
+            Log.w(TAG, "Android TextToSpeech init failed with status: $status")
+            ttsReady = false
+        }
+    }
 
     interface Callback {
         fun onRecordingStarted() {}
@@ -61,7 +88,7 @@ class VoiceConversationManager(private val context: Context) {
                     runOnMain {
                         callback.onResponseReceived(body.transcript, body.llm_response, body.tts_audio_url)
                     }
-                    body.tts_audio_url?.let { playAudioResponse(it, callback) }
+                    speakResponse(body.llm_response, body.tts_audio_url, callback)
                     return@launch
                 }
             } catch (e: Exception) {
@@ -72,13 +99,14 @@ class VoiceConversationManager(private val context: Context) {
             val q = query.lowercase()
             val fallbackText = when {
                 q.contains("who") -> "I am right here keeping watch with you. Your loved ones are always keeping you in their thoughts."
-                q.contains("glass") -> "Your reading glasses are resting on the table next to your chair."
+                q.contains("glass") -> "Your reading glasses are resting on the table in front of the camera."
                 q.contains("medicine") || q.contains("medication") -> "Your daily medications are safely scheduled by your care team."
                 else -> "I am right here with you, keeping you safe and sound."
             }
             runOnMain {
                 callback.onResponseReceived(query, fallbackText, null)
             }
+            speakResponse(fallbackText, null, callback)
         }
     }
 
@@ -119,6 +147,10 @@ class VoiceConversationManager(private val context: Context) {
      * Stop audio playback.
      */
     fun stopPlayback() {
+        try {
+            androidTts?.stop()
+        } catch (_: Exception) {}
+
         synchronized(playerLock) {
             try {
                 mediaPlayer?.let { player ->
@@ -143,6 +175,10 @@ class VoiceConversationManager(private val context: Context) {
         stopRecording()
         stopPlayback()
         try {
+            androidTts?.shutdown()
+            androidTts = null
+        } catch (_: Exception) {}
+        try {
             currentWavFile?.delete()
         } catch (_: Exception) {}
     }
@@ -150,6 +186,7 @@ class VoiceConversationManager(private val context: Context) {
     fun isRecording(): Boolean = voiceRecorder.isRecording()
 
     fun isPlaying(): Boolean {
+        if (androidTts?.isSpeaking == true) return true
         return synchronized(playerLock) {
             try {
                 mediaPlayer?.isPlaying == true
@@ -174,7 +211,7 @@ class VoiceConversationManager(private val context: Context) {
                     runOnMain {
                         callback.onResponseReceived(body.transcript, body.llm_response, body.tts_audio_url)
                     }
-                    body.tts_audio_url?.let { playAudioResponse(it, callback) }
+                    speakResponse(body.llm_response, body.tts_audio_url, callback)
                     return@launch
                 }
             } catch (e: Exception) {
@@ -186,14 +223,41 @@ class VoiceConversationManager(private val context: Context) {
             }
 
             // Fallback audio response
+            val fallbackMsg = "I am right here with you. Everything is calm, safe, and sound."
             runOnMain {
-                callback.onResponseReceived(
-                    "Voice Query",
-                    "I am right here with you. Everything is calm, safe, and sound.",
-                    null
-                )
+                callback.onResponseReceived("Voice Query", fallbackMsg, null)
             }
+            speakResponse(fallbackMsg, null, callback)
         }
+    }
+
+    private fun speakResponse(text: String, audioUrl: String?, callback: Callback) {
+        // Priority 1: If server returned audio URL, play the high-quality Edge-TTS audio
+        if (!audioUrl.isNullOrBlank()) {
+            playAudioResponse(audioUrl, callback)
+            return
+        }
+
+        // Priority 2: Instant Android native TTS
+        if (ttsReady && androidTts != null) {
+            val cleanText = text.replace(Regex("[^a-zA-Z0-9\\s.,!?'-]"), " ").trim()
+            runOnMain { callback.onAudioPlaybackStarted() }
+            androidTts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {
+                    runOnMain { callback.onAudioPlaybackStarted() }
+                }
+                override fun onDone(utteranceId: String?) {
+                    runOnMain { callback.onAudioPlaybackFinished() }
+                }
+                override fun onError(utteranceId: String?) {
+                    runOnMain { callback.onAudioPlaybackFinished() }
+                }
+            })
+            androidTts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, null, "utterance_${System.currentTimeMillis()}")
+            return
+        }
+
+        runOnMain { callback.onAudioPlaybackFinished() }
     }
 
     private fun playAudioResponse(audioUrl: String, callback: Callback) {
@@ -268,6 +332,6 @@ class VoiceConversationManager(private val context: Context) {
     }
 
     companion object {
-        const val TAG = "VoiceConversation"
+        private const val TAG = "VoiceConvManager"
     }
 }
