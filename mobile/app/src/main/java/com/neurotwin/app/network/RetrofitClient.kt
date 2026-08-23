@@ -38,7 +38,7 @@ data class VoiceResponse(
 object RetrofitClient {
 
     const val EMULATOR_BASE_URL = "http://10.0.2.2:8000/"
-    const val DEVICE_BASE_URL = "http://127.0.0.1:8000/"
+    const val DEVICE_BASE_URL = "http://192.168.0.198:8000/"
     val DEFAULT_BASE_URL get() = defaultBaseUrl()
 
     private const val PREFS = "neurotwin_settings"
@@ -71,7 +71,7 @@ object RetrofitClient {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val defaultUrl = defaultBaseUrl()
         var savedUrl = prefs.getString(KEY_BASE_URL, null)
-        if (savedUrl == null || (!isEmulator() && savedUrl.contains("10.0.2.2"))) {
+        if (savedUrl == null || (!isEmulator() && (savedUrl.contains("10.0.2.2") || savedUrl.contains("127.0.0.1")))) {
             savedUrl = defaultUrl
             prefs.edit().putString(KEY_BASE_URL, savedUrl).apply()
         }
